@@ -282,9 +282,11 @@
   async function detail(no, onChange) {
     const m = modal('Peserta ' + no, loading(), { wide: true, headExtra: `<button class="btn sm ghost no-print" id="pr">${icon('print')} Cetak rekaman</button>`, onClose: () => changed && onChange && onChange() });
     let changed = false;
-    $('#pr', m.el).onclick = () => window.print();
+    let current = null;
+    $('#pr', m.el).onclick = () => { if (current) cetakRekaman(current); else toast('Data belum selesai dimuat.', 'bad'); };
     const load = async () => {
       const d = await api('detailPendaftar', { no_reg: no });
+      current = d;
       const r = d.data;
       const file = (k, l) => r[k] ? `<a href="${esc(r[k])}" target="_blank" rel="noopener">${esc(l)}</a>` : `<span class="muted">${esc(l)}: —</span>`;
       m.body.innerHTML = `
@@ -321,6 +323,88 @@
       }));
     };
     try { await load(); } catch (e) { m.body.innerHTML = `<div class="notice bad">${esc(e.message)}</div>`; }
+  }
+
+  /* ---------------- Cetak rekaman pelayanan (dokumen A4 rapi) ---------------- */
+  function cetakRekaman(d) {
+    const r = d.data;
+    const T = tahapPeserta(r);
+    const logo = new URL(CFG.LOGO_FULL || 'assets/img/logo-lsp.png', location.href).href;
+    const row = (k, v) => `<tr><th>${esc(k)}</th><td>${esc(v || '-')}</td></tr>`;
+    const status = (no) => { const t = T[no]; if (!t) return 'Tidak berlaku'; return ({ done: 'Selesai', now: 'Dalam proses', fail: 'Tidak lanjut', skip: 'Tidak berlaku', wait: 'Belum' }[t.st] || '-') + (t.info ? ' — ' + t.info : ''); };
+    const berkas = [['file_ktp', 'Scan KTP'], ['file_foto', 'Pas foto'], ['file_ijazah', 'Ijazah / transkrip / KHS'], ['file_apl02', 'APL-02'], ['file_pendukung', 'Bukti persyaratan skema']];
+    const sekarang = new Date();
+    const tglCetak = tgl(sekarang.getFullYear() + '-' + String(sekarang.getMonth() + 1).padStart(2, '0') + '-' + String(sekarang.getDate()).padStart(2, '0')) + ', ' + String(sekarang.getHours()).padStart(2, '0') + '.' + String(sekarang.getMinutes()).padStart(2, '0');
+    const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Rekaman ${esc(r.no_reg)}</title><style>
+      @page { size: A4 portrait; margin: 0; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; color: #000; line-height: 1.4; }
+      .page { padding: 0 16mm; }
+      table.wrap, table.wrap > * > tr > td { border: 0; padding: 0; }
+      .sp { height: 14mm; }
+      .kop { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 14px; }
+      .kop img { height: 62px; }
+      .kop h1 { font-size: 15pt; margin: 0 0 2px; }
+      .kop p { margin: 0; }
+      h2 { font-size: 11.5pt; margin: 16px 0 6px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; text-align: left; }
+      .id th { width: 32%; font-weight: normal; }
+      thead th { font-weight: bold; background: #eee; }
+      thead { display: table-header-group; }
+      tr { page-break-inside: avoid; break-inside: avoid; }
+      .ttd { display: flex; justify-content: space-between; margin-top: 26px; page-break-inside: avoid; }
+      .ttd > div { width: 45%; }
+      .ttd .garis { margin-top: 60px; border-top: 1px solid #000; padding-top: 3px; }
+      .catatan { margin-top: 10px; }
+    </style></head><body><table class="wrap"><thead><tr><td><div class="sp"></div></td></tr></thead><tfoot><tr><td><div class="sp"></div></td></tr></tfoot><tbody><tr><td><div class="page">
+      <div class="kop"><img src="${logo}" alt=""><div><h1>Rekaman Pelayanan Sertifikasi</h1>
+        <p>${esc(CFG.NAMA_LSP || 'LSP UNIMED')} — Lembaga Sertifikasi Profesi Universitas Negeri Medan</p>
+        <p>Acuan: SOP ${esc(SOP.nomor)} ${esc(SOP.judul)} (Rev. ${esc(SOP.revisi)})</p></div></div>
+
+      <h2>A. Identitas peserta</h2>
+      <table class="id">
+        ${row('No. Registrasi', r.no_reg)}${row('Nama lengkap', r.nama)}${row('NIK', r.nik)}${row('NIM', r.nim)}
+        ${row('Tempat, tanggal lahir', r.tempat_lahir + ', ' + tgl(r.tanggal_lahir))}${row('Jenis kelamin', r.jenis_kelamin)}
+        ${row('Email / No. HP', r.email + ' / ' + r.hp)}${row('Alamat', r.alamat)}
+        ${row('Pendidikan / instansi', [r.pendidikan, r.instansi].filter(String).join(' — '))}${row('Pekerjaan', r.pekerjaan)}
+        ${row('Tujuan asesmen', r.tujuan_asesmen)}${row('Skema sertifikasi', nmSkema(r.id_skema))}
+        ${row('Jadwal pilihan', jadwalLabel(r.id_jadwal))}${row('Tanggal daftar', tgl(r.waktu_daftar))}
+        ${row('Asesor', r.id_asesor ? nmAsesor(r.id_asesor) : '-')}${row('TUK', r.id_tuk ? nmTuk(r.id_tuk) : '-')}
+        ${row('Jadwal asesmen', r.tanggal_asesmen ? tgl(r.tanggal_asesmen, true) + (r.waktu_asesmen ? ', ' + r.waktu_asesmen : '') : '-')}
+        ${row('Keputusan', r.rekomendasi || 'Belum ada')}${row('No. sertifikat', r.no_sertifikat)}
+      </table>
+
+      <h2>B. Kelengkapan berkas (L2)</h2>
+      <table><thead><tr><th style="width:8%">No</th><th>Berkas</th><th style="width:22%">Status</th></tr></thead><tbody>
+        ${berkas.map((b, i) => `<tr><td>${i + 1}</td><td>${b[1]}</td><td>${r[b[0]] ? 'Diunggah' : 'Tidak ada'}</td></tr>`).join('')}
+      </tbody></table>
+
+      <h2>C. Status tahapan sesuai SOP</h2>
+      <table><thead><tr><th style="width:7%">L</th><th style="width:30%">Langkah</th><th style="width:22%">Penanggung jawab</th><th>Status</th></tr></thead><tbody>
+        ${SOP.langkah.filter(l => l.no >= 2 && l.no <= 8).map(l => `<tr><td>${l.no}</td><td>${esc(l.nama)}</td><td>${esc(l.pj)}</td><td>${esc(status(l.no))}</td></tr>`).join('')}
+      </tbody></table>
+      ${r.catatan_verifikasi ? `<p class="catatan"><b>Catatan verifikasi:</b> ${esc(r.catatan_verifikasi)}</p>` : ''}
+      ${r.catatan_hasil ? `<p class="catatan"><b>Catatan hasil:</b> ${esc(r.catatan_hasil)}</p>` : ''}
+
+      <h2>D. Rekaman aktivitas pelayanan (L10)</h2>
+      <table><thead><tr><th style="width:5%">No</th><th style="width:19%">Waktu</th><th style="width:6%">L</th><th>Aktivitas</th><th style="width:24%">Dilakukan oleh</th></tr></thead><tbody>
+        ${d.logs.map((l, i) => `<tr><td>${i + 1}</td><td>${tgl(l.waktu)}</td><td>${esc(l.langkah_sop)}</td><td>${esc(l.aksi)}${l.detail ? '<br>' + esc(l.detail) : ''}</td><td>${esc(l.aktor)}<br>${esc(l.peran)}</td></tr>`).join('') || '<tr><td colspan="5">Belum ada rekaman.</td></tr>'}
+      </tbody></table>
+
+      ${d.layanan.length || d.keluhan.length ? `<h2>E. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
+        ${d.layanan.map(x => `<tr><td>${esc(x.no_layanan)}</td><td>${esc(x.jenis)}</td><td>${esc(x.status)}</td></tr>`).join('')}
+        ${d.keluhan.map(x => `<tr><td>${esc(x.no_tiket)}</td><td>Keluhan: ${esc(x.kategori)}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : ''}
+
+      <div class="ttd">
+        <div>Dicetak oleh: ${esc(USER.nama)} (${esc(USER.peran)})<br>Tanggal cetak: ${esc(tglCetak)}</div>
+        <div>Medan, ${esc(tgl(sekarang.toISOString().slice(0, 10)))}<br>Mengetahui,<br>Sekretariat LSP<div class="garis">Nama dan tanda tangan</div></div>
+      </div>
+    </div></td></tr></tbody></table><script>window.onload = function () { setTimeout(function () { window.print(); }, 300); };<\/script></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { toast('Izinkan pop-up untuk mencetak rekaman.', 'bad'); return; }
+    w.document.write(html);
+    w.document.close();
   }
 
   function bulkForm(regs, tahap) {
