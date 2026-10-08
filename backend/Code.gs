@@ -156,7 +156,7 @@ const PUBLIC = {
         kompeten: daftar.filter(r => r.rekomendasi === 'Kompeten').length
       }
     };
-    cache.put('publicData', JSON.stringify(res), 60);
+    cache.put('publicData', JSON.stringify(res), 600); // 10 menit; dihapus otomatis setiap ada perubahan data
     return res;
   },
 
@@ -300,7 +300,7 @@ const PUBLIC = {
     return { terima_kasih: true };
   },
 
-  /** Login petugas. */
+  /** Login admin. */
   login: (d) => {
     const u = String(d.username || '').trim().toLowerCase();
     const cache = CacheService.getScriptCache();
@@ -316,19 +316,19 @@ const PUBLIC = {
     const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
     const sess = { username: user.username, nama: user.nama, peran: user.peran };
     cache.put('sess_' + token, JSON.stringify(sess), CONFIG.SESSION_SECONDS);
-    log_(sess, 10, 'Login petugas', user.username, '');
+    log_(sess, 10, 'Login admin', user.username, '');
     return { token: token, user: sess };
   }
 };
 
-/* ============================ LAYANAN PETUGAS ============================ */
+/* ============================ LAYANAN ADMIN ============================ */
 
 const ADMIN = {
   me: { fn: (d, u) => ({ username: u.username, nama: u.nama, peran: u.peran }) },
 
   logout: { fn: (d, u) => { CacheService.getScriptCache().remove('sess_' + u._token); return true; } },
 
-  /** Ringkasan dasbor petugas. */
+  /** Ringkasan dasbor admin. */
   summary: {
     fn: () => {
       const p = rows_('Pendaftaran');
@@ -357,7 +357,10 @@ const ADMIN = {
     }
   },
 
-  /** Daftar pendaftar lengkap untuk petugas. */
+  /** Data referensi panel admin dalam satu panggilan (lebih cepat). */
+  refData: { fn: () => ({ Skema: rows_('Skema').map(strip_), TUK: rows_('TUK').map(strip_), Asesor: rows_('Asesor').map(strip_), Jadwal: rows_('Jadwal').map(strip_) }) },
+
+  /** Daftar pendaftar lengkap untuk admin. */
   listPendaftar: { fn: () => rows_('Pendaftaran').map(strip_).reverse() },
 
   /** Detail satu peserta beserta rekaman pelayanannya (langkah 10). */
@@ -515,7 +518,7 @@ const ADMIN = {
   }
 };
 
-/** Definisi tahapan SOP yang diubah petugas. */
+/** Definisi tahapan SOP yang diubah admin. */
 const TAHAP = {
   verifikasi: {
     langkah: 3, roles: ['Bagian Sertifikasi'],
@@ -524,7 +527,7 @@ const TAHAP = {
     auto: () => ({ tgl_verifikasi: now_() }),
     email: r => r.status_verifikasi === 'Menunggu Verifikasi' ? null : {
       subjek: 'Hasil verifikasi persyaratan: ' + r.status_verifikasi,
-      isi: 'Hasil verifikasi persyaratan Anda: <b>' + esc_(r.status_verifikasi) + '</b>.' + (r.catatan_verifikasi ? '<br>Catatan petugas: ' + esc_(r.catatan_verifikasi) : '') +
+      isi: 'Hasil verifikasi persyaratan Anda: <b>' + esc_(r.status_verifikasi) + '</b>.' + (r.catatan_verifikasi ? '<br>Catatan admin: ' + esc_(r.catatan_verifikasi) : '') +
         (r.status_verifikasi === 'Memenuhi Syarat' ? '<br>Jadwal, asesor, dan TUK akan disampaikan melalui email berikutnya.' : '')
     },
     aksi: v => 'Verifikasi persyaratan: ' + v.status_verifikasi,
@@ -628,11 +631,28 @@ function setup() {
     const pw = Utilities.getUuid().replace(/-/g, '').slice(0, 10);
     const salt = Utilities.getUuid();
     append_('Pengguna', { username: 'admin', nama: 'Administrator LSP', peran: 'Admin', salt: salt, password_hash: hash_(pw, salt), aktif: 'YA' });
-    pesan += '\nAkun petugas awal → username: admin | password: ' + pw + '\nSegera ganti password setelah login.';
+    pesan += '\nAkun admin awal → username: admin | password: ' + pw + '\nSegera ganti password setelah login.';
   }
   Logger.log(pesan);
   try { SpreadsheetApp.getUi().alert(pesan); } catch (e) { /* dijalankan dari editor tanpa UI */ }
   invalidate_();
+}
+
+/**
+ * PEMANAS — jalankan pasangPemanas() SEKALI dari editor.
+ * Membuat pemicu tiap 5 menit yang menyegarkan cache data publik,
+ * sehingga halaman situs tidak menunggu spreadsheet dibaca ulang.
+ */
+function pemanas() {
+  CacheService.getScriptCache().remove('publicData');
+  PUBLIC.publicData();
+}
+
+function pasangPemanas() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'pemanas').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('pemanas').timeBased().everyMinutes(5).create();
+  pemanas();
+  Logger.log('Pemanas aktif: cache data publik disegarkan setiap 5 menit.');
 }
 
 /** Darurat: reset password akun "admin". Password baru tampil di Log Eksekusi. */
