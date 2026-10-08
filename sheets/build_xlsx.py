@@ -176,8 +176,8 @@ lines = [
   ('Aturan penting', True),
   ('Jangan mengubah nama sheet, nama kolom di baris 1, atau urutan kolom.', False),
   ('Tanggal ditulis teks yyyy-mm-dd, contoh 2026-10-17. Kolom diformat teks agar NIK dan nomor HP tidak berubah.', False),
-  ('Sheet Pendaftaran, Keluhan, Layanan, Survei, Log, dan Pengguna diisi otomatis oleh sistem. Pengguna dibuat oleh setup() dan panel petugas.', False),
-  ('Bagikan spreadsheet ini hanya kepada admin LSP. Petugas lain bekerja lewat panel web sesuai perannya.', False),
+  ('Sheet Pendaftaran, Keluhan, Layanan, Survei, Log, dan Pengguna diisi otomatis oleh sistem. Pengguna dibuat oleh setup() dan panel admin.', False),
+  ('Bagikan spreadsheet ini hanya kepada admin LSP. Admin lain bekerja lewat panel web sesuai perannya.', False),
 ]
 for t, b in lines:
     pet.append([t])
