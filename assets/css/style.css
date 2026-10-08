@@ -378,3 +378,9 @@ details.card summary { cursor: pointer; list-style: revert; }
 @media (max-width: 600px) { .steps::before { left: 15px; } .step { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; } .step .num { width: 32px; height: 32px; font-size: .9rem; } }
 td.mono { white-space: nowrap; }
 .skema-item { scroll-margin-top: 84px; }
+
+/* Logo LSP UNIMED */
+.logo img, .brand img { width: auto; height: 44px; object-fit: contain; background: none; border-radius: 0; padding: 0; }
+.hero-logo { height: 84px; width: auto; display: block; margin-bottom: 20px; }
+.login-logo { height: 96px; width: auto; display: block; margin-bottom: 18px; }
+@media (max-width: 860px) { .hero-logo { height: 64px; } }
