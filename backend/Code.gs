@@ -727,8 +727,14 @@ function setup() {
  * sehingga halaman situs tidak menunggu spreadsheet dibaca ulang.
  */
 function pemanas() {
-  CacheService.getScriptCache().remove('publicData');
-  PUBLIC.publicData();
+  const cache = CacheService.getScriptCache();
+  const lama = cache.get('publicData');
+  cache.remove('publicData');
+  try { PUBLIC.publicData(); }
+  catch (e) {
+    if (lama) cache.put('publicData', lama, 600); // pertahankan data lama bila Google sedang gangguan
+    console.warn('pemanas: ' + e.message);       // tidak dilempar agar tidak mengirim email kegagalan pemicu
+  }
 }
 
 function pasangPemanas() {
@@ -864,7 +870,23 @@ function seed_() {
 
 /* ================================ UTILITAS ================================ */
 
-function ss_() { return CONFIG.SPREADSHEET_ID ? SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet(); }
+let SS_ = null; // dibuka sekali per eksekusi
+function ss_() {
+  if (!SS_) SS_ = coba_(() => CONFIG.SPREADSHEET_ID ? SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet());
+  return SS_;
+}
+
+/** Ulangi panggilan layanan Google yang gagal sesaat (mis. "Service Spreadsheets failed"). */
+function coba_(fn, kali) {
+  kali = kali || 4;
+  for (let i = 1; ; i++) {
+    try { return fn(); } catch (e) {
+      const sesaat = /Service|timed out|Internal error|try again|failed while accessing/i.test(String(e && e.message));
+      if (!sesaat || i >= kali) throw e;
+      Utilities.sleep(400 * i * i);
+    }
+  }
+}
 
 function sh_(name) {
   const s = ss_().getSheetByName(name);
@@ -874,9 +896,11 @@ function sh_(name) {
 
 function rows_(name) {
   const s = sh_(name);
-  const last = s.getLastRow();
-  if (last < 2) return [];
-  const v = s.getRange(1, 1, last, s.getLastColumn()).getValues();
+  const v = coba_(() => {
+    const last = s.getLastRow();
+    return last < 2 ? null : s.getRange(1, 1, last, s.getLastColumn()).getValues();
+  });
+  if (!v) return [];
   const head = v.shift().map(String);
   const out = [];
   v.forEach((r, i) => {
