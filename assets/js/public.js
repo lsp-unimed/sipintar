@@ -122,6 +122,31 @@
       <div class="end"><a class="btn sm ghost" href="#/skema/${esc(j.id_skema)}">Persyaratan</a>${j.bisa_daftar ? `<a class="btn sm" href="#/daftar/${esc(j.id_jadwal)}">Daftar</a>` : status}</div></li>`;
   }
 
+  /* ---------------- Persiapan berkas sebelum mendaftar ---------------- */
+  function linkDok(D, re, idSkema) {
+    const d = D.dokumen.find(x => re.test(x.nomor + ' ' + x.judul) && x.link && (idSkema ? x.id_skema === idSkema : !x.id_skema))
+      || D.dokumen.find(x => re.test(x.nomor + ' ' + x.judul) && x.link && !x.id_skema);
+    return d ? d.link : '';
+  }
+  function persiapanBerkas(D, idSkema) {
+    const apl01 = linkDok(D, /APL.?01/i, idSkema);
+    const a = (href, t) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${t}</a>` : t;
+    const info = D.pengaturan.info_verifikasi_langsung || 'Verifikasi langsung berkas asli dilakukan di Sekretariat LSP UNIMED pada jam layanan.';
+    return `<div class="card" style="background:var(--amber-soft);border-color:#f3dcb1">
+      <h3 style="margin-top:0">Siapkan berkas sebelum mendaftar</h3>
+      <p style="margin-bottom:8px">Pendaftaran dilakukan sekali isi. Pindai (scan) berkas berikut terlebih dahulu dalam format <b>PDF, JPG, atau PNG, maksimal ${CFG.MAX_FILE_MB || 2} MB per berkas</b>:</p>
+      <ol style="margin:0 0 10px;padding-left:20px">
+        <li><b>FR.APL.01</b> Permohonan Sertifikasi — diisi lengkap dan <b>ditandatangani</b>. ${apl01 ? 'Unduh template: ' + a(apl01, 'FR.APL.01') : 'Template tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
+        <li><b>FR.APL.02</b> Asesmen Mandiri sesuai skema yang dipilih — template di ${a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu')}.</li>
+        <li>KTP dan pas foto berwarna terbaru.</li>
+        <li>KHS / transkrip dengan nilai minimal B pada mata kuliah yang disyaratkan skema.</li>
+        <li>Surat keterangan mahasiswa aktif dari Dekan, serta bukti magang/PKLI atau sertifikat pelatihan — gabungkan dalam satu PDF.</li>
+      </ol>
+      <p style="margin:0"><b>Simpan berkas aslinya.</b> Setelah berkas online dinyatakan lengkap, Anda wajib datang untuk <b>verifikasi langsung</b> dengan membawa seluruh berkas asli. ${esc(info)}</p>
+      <div class="mini-alur"><span>1. Daftar online</span><span>2. Pemeriksaan kelengkapan</span><span>3. Verifikasi langsung berkas asli</span><span>4. Jadwal asesmen</span></div>
+    </div>`;
+  }
+
   /* ---------------- Bukti pendaftaran ---------------- */
   function buktiRows(b) {
     return [['No. Registrasi', b.no_reg], ['Nama', b.nama], ['NIK', b.nik], ['Email', b.email], ['Skema', b.skema + (b.kode_skema ? ' (' + b.kode_skema + ')' : '')],
@@ -170,6 +195,23 @@
     };
     f.addEventListener('submit', (e) => { e.preventDefault(); busy($('button[type=submit]', f), go); });
     if ($('[name=no_reg]', f).value && $('[name=email]', f).value) go();
+  }
+
+  function statusBerkas(r) {
+    const kl = r.status_kelengkapan || 'Menunggu Pemeriksaan';
+    const info = (PD && PD.pengaturan.info_verifikasi_langsung) || '';
+    const lbl = { apl01: 'FR.APL.01', ktp: 'KTP', foto: 'Pas foto', ijazah: 'KHS / transkrip', apl02: 'FR.APL.02', pendukung: 'Surat aktif + bukti persyaratan' };
+    let h = `<div style="margin-top:14px"><b>Kelengkapan berkas:</b> ${badge(kl)} <small class="muted">Terunggah: ${(r.berkas || []).map(k => lbl[k.replace(/^file_/, '')] || k).join(', ') || '-'}</small></div>`;
+    const ulang = kl === 'Belum Lengkap' || r.status_verifikasi === 'Perlu Perbaikan';
+    if (kl === 'Belum Lengkap') h += `<div class="notice" style="margin-top:10px"><b>Berkas belum lengkap:</b> ${esc(r.catatan_kelengkapan || '-')}</div>`;
+    if (r.status_verifikasi === 'Perlu Perbaikan') h += `<div class="notice" style="margin-top:10px"><b>Perlu perbaikan:</b> ${esc(r.catatan_verifikasi || '-')}</div>`;
+    if (r.status_verifikasi === 'Tidak Memenuhi Syarat') h += `<div class="notice bad" style="margin-top:10px"><b>Tidak memenuhi syarat.</b> ${esc(r.catatan_verifikasi || '')}</div>`;
+    if (kl === 'Lengkap' && r.status_verifikasi === 'Menunggu Verifikasi') h += `<div class="notice info" style="margin-top:10px"><b>Berkas lengkap — lakukan verifikasi langsung.</b> Bawa seluruh berkas asli (APL-01 bertanda tangan, surat keterangan aktif, print out KHS, KTP, dan bukti persyaratan). ${esc(info)}</div>`;
+    if (ulang) h += `<form class="form" id="fUlang" style="margin-top:10px;padding:14px;border:1px dashed var(--line);border-radius:10px">
+        <b>Unggah ulang berkas</b><small class="muted">Pilih hanya berkas yang perlu diganti. PDF/JPG/PNG, maks. ${CFG.MAX_FILE_MB || 2} MB.</small>
+        ${Object.keys(lbl).map(k => `<label class="f">${lbl[k]}<input type="file" name="file_${k}" accept=".pdf,.jpg,.jpeg,.png"></label>`).join('')}
+        <div><button class="btn sm" type="submit">${icon('send')} Kirim berkas</button></div></form>`;
+    return h;
   }
 
   function identitas(r) {
@@ -316,11 +358,11 @@
 
     jadwal(D, args) {
       const pre = args[0] || '';
-      view.innerHTML = `<div class="toolbar">
+      view.innerHTML = persiapanBerkas(D, pre) + `<div class="toolbar">
         <select id="jdS" aria-label="Filter skema"><option value="">Semua skema</option>${D.skema.map(s => `<option value="${esc(s.id_skema)}" ${pre === s.id_skema ? 'selected' : ''}>${esc(s.nama_skema)}</option>`).join('')}</select>
         <label class="check"><input type="checkbox" id="jdO" checked> Hanya yang masih dibuka</label></div>
         <ul class="sched" id="jdB"></ul>
-        <p class="muted" style="margin-top:14px">Asesor dan TUK final ditetapkan setelah persyaratan Anda diverifikasi, lalu tampil di <a href="#/plotting">Plotting asesor & TUK</a>.</p>`;
+        <p class="muted" style="margin-top:14px">Asesor dan TUK final ditetapkan setelah berkas asli Anda lolos verifikasi langsung, lalu tampil di <a href="#/plotting">Plotting asesor & TUK</a>.</p>`;
       const draw = () => {
         const s = $('#jdS').value, o = $('#jdO').checked;
         const list = D.jadwal.filter(j => (!s || j.id_skema === s) && (!o || j.bisa_daftar));
@@ -337,8 +379,9 @@
       const apl = D.dokumen.find(x => x.id_skema === j.id_skema && /APL.?02/i.test(x.nomor + ' ' + x.judul) && x.link);
       const apl02 = apl ? apl.link : D.pengaturan.link_template_apl02;
       const syarat = String(sk.persyaratan || '').split(/\n+/).map(x => x.trim()).filter(String);
+      const apl01 = linkDok(D, /APL.?01/i, j.id_skema);
       const file = (name, label, req, hint) => `<label class="f">${label} ${req ? '<span class="req">*</span>' : ''}<input type="file" name="${name}" accept=".pdf,.jpg,.jpeg,.png" ${req ? 'required' : ''}><small class="muted">${hint || 'PDF/JPG/PNG, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB'}</small></label>`;
-      view.innerHTML = `
+      view.innerHTML = persiapanBerkas(D, j.id_skema) + `
       <div class="card"><div class="card-head"><div><small class="muted">Jadwal dipilih</small><h2 style="margin:0">${esc(j.nama_skema)}</h2></div><a class="btn sm ghost" href="#/jadwal">Ganti jadwal</a></div>
         <dl class="kv"><dt>Tanggal</dt><dd>${tgl(j.tanggal, true)} ${esc(j.waktu || '')}</dd><dt>TUK</dt><dd>${esc(j.nama_tuk || '')}</dd><dt>Batas pendaftaran</dt><dd>${tgl(j.batas_daftar)}</dd>
         </dl></div>
@@ -368,9 +411,10 @@
           <p class="muted" style="margin:0">Formulir khusus skema ini tersedia di <a href="#/dokumen/${esc(j.id_skema)}" target="_blank">Dokumen mutu</a>.</p>
         </div></fieldset>
         <fieldset><legend>Dokumen persyaratan</legend><div class="form">
+          <div class="row">${file('file_apl01', 'FR.APL.01 yang telah diisi dan ditandatangani', true, apl01 ? `Unduh template: <a href="${esc(apl01)}" target="_blank" rel="noopener">FR.APL.01</a> · PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB` : '')}${file('file_apl02', 'FR.APL.02 (asesmen mandiri) yang telah diisi', false, apl02 ? `Unduh template: <a href="${esc(apl02)}" target="_blank" rel="noopener">FR.APL.02</a>` : '')}</div>
           <div class="row">${file('file_ktp', 'Scan KTP', true)}${file('file_foto', 'Pas foto berwarna', true, 'JPG/PNG latar merah/biru, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
-          <div class="row">${file('file_ijazah', 'Ijazah / transkrip / KHS', false)}${file('file_apl02', 'APL-02 (asesmen mandiri) yang telah diisi', false, apl02 ? `Unduh template: <a href="${esc(apl02)}" target="_blank" rel="noopener">FR.APL.02</a>` : '')}</div>
-          ${file('file_pendukung', 'Bukti persyaratan skema (sertifikat pelatihan, surat magang, portofolio, dll.)', false, 'Gabungkan dalam satu PDF, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}
+          <div class="row">${file('file_ijazah', 'KHS / transkrip nilai', false)}${file('file_pendukung', 'Surat aktif kuliah + bukti magang/PKLI atau sertifikat pelatihan', false, 'Gabungkan dalam satu PDF, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
+          <p class="muted" style="margin:0">Berkas asli wajib dibawa saat verifikasi langsung.</p>
         </div></fieldset>
         <label class="check"><input type="checkbox" name="setuju"> <span>Saya menyatakan data dan dokumen yang saya sampaikan benar. Saya bersedia mengikuti asesmen sesuai ketentuan LSP dan memahami bahwa data saya dijaga kerahasiaannya.</span></label>
         <div><button class="btn gold" type="submit">${icon('send')} Kirim permohonan</button></div>
@@ -394,7 +438,7 @@
             view.innerHTML = `<div class="card"><div class="ticket"><div class="muted">Permohonan diterima. Nomor registrasi Anda:</div>
               <div class="no mono">${esc(r.no_reg)}</div><button class="btn sm ghost" id="cp">Salin nomor</button></div>
               <dl class="kv" style="margin:18px 0">${buktiRows(r).slice(1).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl>
-              <div class="notice ok">${r.email_terkirim ? 'Bukti pendaftaran juga sudah dikirim ke <b>' + esc(r.email) + '</b>.' : 'Simpan nomor registrasi ini.'} Berkas Anda akan diverifikasi oleh Bagian Sertifikasi; hasilnya dikirim ke email dan tampil di Status permohonan.</div>
+              <div class="notice ok">${r.email_terkirim ? 'Bukti pendaftaran juga sudah dikirim ke <b>' + esc(r.email) + '</b>.' : 'Simpan nomor registrasi ini.'} <br><b>Langkah berikutnya:</b> Bagian Administrasi memeriksa kelengkapan berkas Anda. Bila lengkap, Anda akan diminta datang untuk <b>verifikasi langsung dengan membawa berkas asli</b>. Pemberitahuannya dikirim ke email dan tampil di Status permohonan.</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="pb">${icon('print')} Cetak / simpan PDF bukti</button><a class="btn ghost" href="#/status">${icon('search')} Pantau status</a></div></div>`;
             $('#cp').onclick = () => copy(r.no_reg);
             $('#pb').onclick = () => cetakBukti(r);
@@ -404,12 +448,26 @@
     },
 
     status() {
+      view.addEventListener('submit', (e) => {
+        const f = e.target.closest('#fUlang'); if (!f) return;
+        e.preventDefault();
+        busy($('button[type=submit]', f), async () => {
+          try {
+            const files = {};
+            for (const el of $$('input[type=file]', f)) if (el.files[0]) files[el.name] = await fileToPayload(el.files[0]);
+            if (!Object.keys(files).length) throw new Error('Pilih minimal satu berkas.');
+            await api('unggahUlang', { no_reg: LAST.no_reg, email: LAST.email, files });
+            toast('Berkas terkirim. Menunggu pemeriksaan ulang.', 'ok');
+            $('#lkS button[type=submit]').click();
+          } catch (err) { toast(err.message, 'bad'); }
+        });
+      });
       view.innerHTML = lookupForm('lkS', 'Cek status pendaftaran', 'Cek status');
       view.addEventListener('click', (e) => { if (e.target.closest('[data-bukti]') && LAST) cetakBukti({ no_reg: LAST.no_reg, nama: LAST.nama, nik: LAST.nik, email: LAST.email, skema: LAST.skema, kode_skema: LAST.kode_skema, tanggal: LAST.jadwal_tanggal, waktu: LAST.jadwal_waktu, tuk: LAST.tuk, waktu_daftar: LAST.waktu_daftar, status_verifikasi: LAST.status_verifikasi }); });
       bindLookup('lkS', r => `
         <div class="grid g2">
           <div class="card"><div class="card-head"><h3>Data permohonan</h3><button class="btn sm ghost" data-bukti>${icon('print')} Cetak bukti</button></div>${identitas(r)}
-            ${r.status_verifikasi === 'Perlu Perbaikan' ? `<div class="notice" style="margin-top:14px"><b>Perlu perbaikan:</b> ${esc(r.catatan_verifikasi || 'Hubungi Sekretariat LSP.')}<br><small>Kirim dokumen perbaikan ke email LSP dengan menyebutkan No. Registrasi.</small></div>` : ''}
+            ${statusBerkas(r)}
             ${r.status_verifikasi === 'Tidak Memenuhi Syarat' ? `<div class="notice bad" style="margin-top:14px"><b>Tidak memenuhi syarat.</b> ${esc(r.catatan_verifikasi || '')}</div>` : ''}
             ${r.status_jadwal === 'Terjadwal' ? `<div class="notice info" style="margin-top:14px"><b>Jadwal asesmen:</b> ${tgl(r.tanggal_asesmen, true)} ${esc(r.waktu_asesmen || '')}<br>TUK: ${esc(r.tuk)}${r.tuk_alamat ? ' — ' + esc(r.tuk_alamat) : ''}<br>Asesor: ${esc(r.asesor)}</div>` : ''}
           </div>

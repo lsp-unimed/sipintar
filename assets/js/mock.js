@@ -1,7 +1,7 @@
 /* MODE DEMO — tiruan backend di browser. Aktif hanya jika API_URL di config.js kosong.
    Data contoh disimpan di localStorage browser ini saja. Akun demo: admin / demo12345 */
 (function () {
-  const KEY = 'sipintar_demo_db_v3';
+  const KEY = 'sipintar_demo_db_v4';
   const SEED = window.SIPINTAR_SEED || { skema: [], tuk: [] };
   const pad = (n, w) => String(n).padStart(w, '0');
   const now = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2) + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2); };
@@ -19,7 +19,8 @@
         nomor_lisensi: '', alamat: 'Jl. William Iskandar Ps. V, Medan Estate, Deli Serdang, Sumatera Utara 20221',
         email: 'lspunimed@unimed.ac.id', telepon: '', whatsapp: '', jam_layanan: 'Senin–Jumat, 08.00–16.00 WIB',
         pengumuman: 'Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.',
-        link_template_apl02: '', info_pengambilan_sertifikat: 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.'
+        link_template_apl02: '', info_pengambilan_sertifikat: 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.',
+        info_verifikasi_langsung: 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.'
       },
       Skema: SEED.skema.map((k, i) => ({
         id_skema: 'SKM-' + pad(i + 1, 3), kode_skema: '', nama_skema: k.nama, jenis_skema: k.jenis, jumlah_unit: '',
@@ -43,11 +44,12 @@
     };
     // contoh peserta di berbagai tahap
     const contoh = [
-      ['Andi Pratama', 'JDW-001', { status_verifikasi: 'Memenuhi Syarat', status_jadwal: 'Terjadwal', id_asesor: 'ASR-001', id_tuk: 'TUK-009', tanggal_asesmen: '2026-10-17', waktu_asesmen: '08.00 WIB', status_asesmen: 'Dokumen Siap' }],
-      ['Siti Rahmawati', 'JDW-001', { status_verifikasi: 'Memenuhi Syarat', status_jadwal: 'Terjadwal', id_asesor: 'ASR-001', id_tuk: 'TUK-009', tanggal_asesmen: '2026-10-17', waktu_asesmen: '08.00 WIB' }],
-      ['Budi Santoso', 'JDW-002', { status_verifikasi: 'Memenuhi Syarat' }],
-      ['Dewi Lestari', 'JDW-003', { status_verifikasi: 'Menunggu Verifikasi' }],
-      ['Rizky Hidayat', 'JDW-002', { status_verifikasi: 'Perlu Perbaikan', catatan_verifikasi: 'Transkrip belum dilegalisir.' }]
+      ['Andi Pratama', 'JDW-001', { status_kelengkapan: 'Lengkap', verifikasi_langsung: 'YA', rekomendasi_apl01: 'Diterima', status_verifikasi: 'Memenuhi Syarat', status_jadwal: 'Terjadwal', id_asesor: 'ASR-001', id_tuk: 'TUK-009', tanggal_asesmen: '2026-10-17', waktu_asesmen: '08.00 WIB', status_asesmen: 'Dokumen Siap' }],
+      ['Siti Rahmawati', 'JDW-001', { status_kelengkapan: 'Lengkap', verifikasi_langsung: 'YA', rekomendasi_apl01: 'Diterima', status_verifikasi: 'Memenuhi Syarat', status_jadwal: 'Terjadwal', id_asesor: 'ASR-001', id_tuk: 'TUK-009', tanggal_asesmen: '2026-10-17', waktu_asesmen: '08.00 WIB' }],
+      ['Budi Santoso', 'JDW-002', { status_kelengkapan: 'Lengkap', verifikasi_langsung: 'YA', rekomendasi_apl01: 'Diterima', status_verifikasi: 'Memenuhi Syarat' }],
+      ['Dewi Lestari', 'JDW-003', { status_kelengkapan: 'Lengkap', status_verifikasi: 'Menunggu Verifikasi' }],
+      ['Rizky Hidayat', 'JDW-002', { status_kelengkapan: 'Belum Lengkap', catatan_kelengkapan: 'KHS belum diunggah.', status_verifikasi: 'Menunggu Verifikasi' }],
+      ['Nur Aisyah', 'JDW-003', { status_verifikasi: 'Menunggu Verifikasi' }]
     ];
     contoh.forEach((c, i) => {
       const j = db.Jadwal.find(x => x.id_jadwal === c[1]);
@@ -56,12 +58,14 @@
         no_reg: no, waktu_daftar: plus(-5 + i) + ' 09:1' + i + ':00', id_jadwal: c[1], id_skema: j.id_skema, nama: c[0],
         nik: '1271' + pad(i + 1, 12), nim: '52' + pad(i + 1, 8), tempat_lahir: 'Medan', tanggal_lahir: '2003-01-0' + (i + 1), jenis_kelamin: i % 2 ? 'Perempuan' : 'Laki-laki',
         email: 'peserta' + (i + 1) + '@contoh.id', hp: '08120000000' + i, alamat: 'Medan', instansi: 'Pendidikan Teknik Mesin, Unimed', pendidikan: 'SMA/SMK', pekerjaan: 'Mahasiswa', tujuan_asesmen: 'Sertifikasi',
-        file_ktp: '#', file_foto: '#', file_ijazah: '#', file_apl02: '#', file_pendukung: '',
+        file_ktp: '#', file_foto: '#', file_ijazah: '#', file_apl02: '#', file_pendukung: '', file_apl01: '#',
+        status_kelengkapan: 'Menunggu Pemeriksaan', catatan_kelengkapan: '', cek_berkas: '', tgl_kelengkapan: '', verifikasi_langsung: '', cek_persyaratan: '', rekomendasi_apl01: '',
         status_verifikasi: 'Menunggu Verifikasi', catatan_verifikasi: '', tgl_verifikasi: '', status_jadwal: 'Belum Dijadwalkan', id_asesor: '', id_tuk: '', tanggal_asesmen: '', waktu_asesmen: '',
         status_asesmen: 'Belum', catatan_asesmen: '', rekomendasi: '', tgl_hasil: '', link_surat_hasil: '', catatan_hasil: '', status_sertifikat: 'Belum Terbit', no_sertifikat: '', tgl_serah: '', penerima: '', diperbarui: now()
       }, c[2]));
       db.Log.push({ waktu: plus(-5 + i) + ' 09:1' + i + ':00', aktor: 'publik', peran: 'Pemohon', langkah_sop: '2', aksi: 'Permohonan sertifikasi diterima (APL-01)', ref: no, detail: '' });
-      if (c[2].status_verifikasi && c[2].status_verifikasi !== 'Menunggu Verifikasi') db.Log.push({ waktu: plus(-4 + i) + ' 10:00:00', aktor: 'Administrator (Demo)', peran: 'Admin', langkah_sop: '3', aksi: 'Verifikasi persyaratan: ' + c[2].status_verifikasi, ref: no, detail: c[2].catatan_verifikasi || '' });
+      if (c[2].status_kelengkapan) db.Log.push({ waktu: plus(-5 + i) + ' 13:00:00', aktor: 'Administrator (Demo)', peran: 'Admin', langkah_sop: '2', aksi: 'Pemeriksaan kelengkapan berkas: ' + c[2].status_kelengkapan, ref: no, detail: c[2].catatan_kelengkapan || '' });
+      if (c[2].status_verifikasi && c[2].status_verifikasi !== 'Menunggu Verifikasi') db.Log.push({ waktu: plus(-4 + i) + ' 10:00:00', aktor: 'Administrator (Demo)', peran: 'Admin', langkah_sop: '3', aksi: 'Verifikasi langsung berkas asli: ' + c[2].status_verifikasi, ref: no, detail: c[2].catatan_verifikasi || '' });
       if (c[2].status_jadwal) db.Log.push({ waktu: plus(-3 + i) + ' 11:00:00', aktor: 'Administrator (Demo)', peran: 'Admin', langkah_sop: '4', aksi: 'Penjadwalan: asesor & TUK ditetapkan, jadwal disampaikan', ref: no, detail: '' });
       if (c[2].rekomendasi) db.Log.push({ waktu: plus(-8) + ' 10:00:00', aktor: 'Administrator (Demo)', peran: 'Admin', langkah_sop: '7', aksi: 'Hasil sertifikasi disampaikan: ' + c[2].rekomendasi, ref: no, detail: '' });
     });
@@ -101,13 +105,15 @@
     return Object.assign({}, r, {
       nik: r.nik.slice(0, 4) + '********' + r.nik.slice(-4), skema: (S[r.id_skema] || {}).nama_skema, kode_skema: (S[r.id_skema] || {}).kode_skema,
       jadwal_tanggal: j.tanggal, jadwal_waktu: j.waktu, asesor: (A[r.id_asesor] || {}).nama_asesor || '', tuk: (T[r.id_tuk] || {}).nama_tuk || '', tuk_alamat: (T[r.id_tuk] || {}).alamat || '',
+      status_kelengkapan: r.status_kelengkapan || 'Menunggu Pemeriksaan', berkas: ['file_apl01', 'file_apl02', 'file_ktp', 'file_foto', 'file_ijazah', 'file_pendukung'].filter(k => r[k]),
       riwayat: db.Log.filter(l => l.ref === r.no_reg).map(l => ({ waktu: l.waktu, langkah_sop: l.langkah_sop, aksi: l.aksi }))
     });
   }
 
   const TAHAP = {
-    verifikasi: { l: 3, f: ['status_verifikasi', 'catatan_verifikasi'], auto: () => ({ tgl_verifikasi: now() }), a: v => 'Verifikasi persyaratan: ' + v.status_verifikasi, d: v => v.catatan_verifikasi },
-    plotting: { l: 4, f: ['id_asesor', 'id_tuk', 'tanggal_asesmen', 'waktu_asesmen'], chk: v => (!v.id_asesor || !v.id_tuk || !v.tanggal_asesmen) && fail('Asesor, TUK, dan tanggal wajib diisi.'), auto: () => ({ status_jadwal: 'Terjadwal' }), a: () => 'Penjadwalan: asesor & TUK ditetapkan, jadwal disampaikan', d: v => v.id_asesor + ' · ' + v.id_tuk + ' · ' + v.tanggal_asesmen },
+    kelengkapan: { l: 2, f: ['status_kelengkapan', 'catatan_kelengkapan', 'cek_berkas'], chk: v => { if (['Menunggu Pemeriksaan', 'Lengkap', 'Belum Lengkap'].indexOf(v.status_kelengkapan) < 0) fail('Status kelengkapan tidak valid.'); if (v.status_kelengkapan === 'Belum Lengkap' && !String(v.catatan_kelengkapan || '').trim()) fail('Tuliskan berkas apa yang belum lengkap pada catatan.'); }, auto: () => ({ tgl_kelengkapan: now() }), a: v => 'Pemeriksaan kelengkapan berkas: ' + v.status_kelengkapan, d: v => [v.cek_berkas ? 'Diperiksa: ' + v.cek_berkas : '', v.catatan_kelengkapan || ''].filter(String).join(' · ') },
+    verifikasi: { l: 3, f: ['status_verifikasi', 'catatan_verifikasi', 'verifikasi_langsung', 'cek_persyaratan'], chk: v => { if (v.status_verifikasi === 'Memenuhi Syarat' && String(v.verifikasi_langsung) !== 'YA') fail('Memenuhi Syarat hanya bisa disimpan setelah berkas asli dicocokkan (verifikasi langsung).'); }, guard: (r, v, no) => { if (v.status_verifikasi !== 'Menunggu Verifikasi' && r.status_kelengkapan !== 'Lengkap') fail(no + ': berkas belum dinyatakan lengkap oleh Bagian Administrasi (L2).'); }, auto: v => ({ tgl_verifikasi: now(), rekomendasi_apl01: v.status_verifikasi === 'Memenuhi Syarat' ? 'Diterima' : v.status_verifikasi === 'Tidak Memenuhi Syarat' ? 'Tidak diterima' : '' }), a: v => (String(v.verifikasi_langsung) === 'YA' ? 'Verifikasi langsung berkas asli: ' : 'Verifikasi persyaratan: ') + v.status_verifikasi, d: v => v.catatan_verifikasi },
+    plotting: { l: 4, f: ['id_asesor', 'id_tuk', 'tanggal_asesmen', 'waktu_asesmen'], guard: (r, v, no) => { if (r.status_verifikasi !== 'Memenuhi Syarat') fail(no + ': belum lolos verifikasi langsung (L3).'); }, chk: v => (!v.id_asesor || !v.id_tuk || !v.tanggal_asesmen) && fail('Asesor, TUK, dan tanggal wajib diisi.'), auto: () => ({ status_jadwal: 'Terjadwal' }), a: () => 'Penjadwalan: asesor & TUK ditetapkan, jadwal disampaikan', d: v => v.id_asesor + ' · ' + v.id_tuk + ' · ' + v.tanggal_asesmen },
     asesmen: { l: 5, f: ['status_asesmen', 'catatan_asesmen'], a: v => v.status_asesmen === 'Dokumen Siap' ? 'Administrasi asesmen: dokumen disiapkan' : 'Status asesmen: ' + v.status_asesmen, d: v => v.catatan_asesmen },
     pelaksanaan: { l: 6, f: ['status_asesmen', 'catatan_asesmen'], a: v => 'Pelaksanaan pelayanan sertifikasi: ' + v.status_asesmen, d: v => v.catatan_asesmen },
     hasil: { l: 7, f: ['rekomendasi', 'link_surat_hasil', 'catatan_hasil'], chk: v => ['Kompeten', 'Belum Kompeten'].indexOf(v.rekomendasi) < 0 && fail('Pilih Kompeten / Belum Kompeten.'), auto: v => ({ tgl_hasil: now(), status_asesmen: 'Selesai', status_sertifikat: v.rekomendasi === 'Kompeten' ? 'Diajukan ke BNSP' : 'Belum Terbit' }), a: v => 'Hasil sertifikasi disampaikan: ' + v.rekomendasi, d: v => v.catatan_hasil },
@@ -138,19 +144,30 @@
       const dobel = db.Pendaftaran.find(r => r.id_jadwal === d.id_jadwal && r.nik === d.nik && r.status_verifikasi !== 'Tidak Memenuhi Syarat');
       if (dobel) fail('NIK ini sudah terdaftar pada jadwal yang sama (No. Registrasi ' + dobel.no_reg + ').');
       const f = d.files || {};
+      if (!f.file_apl01) fail('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
       if (!f.file_ktp) fail('Scan KTP wajib diunggah.');
       if (!f.file_foto) fail('Pas foto wajib diunggah.');
       const no = nextId('REG', 'LSPU-' + ym() + '-', 4);
-      const r = { no_reg: no, waktu_daftar: now(), id_jadwal: j.id_jadwal, id_skema: j.id_skema, status_verifikasi: 'Menunggu Verifikasi', catatan_verifikasi: '', tgl_verifikasi: '', status_jadwal: 'Belum Dijadwalkan', id_asesor: '', id_tuk: '', tanggal_asesmen: '', waktu_asesmen: '', status_asesmen: 'Belum', catatan_asesmen: '', rekomendasi: '', tgl_hasil: '', link_surat_hasil: '', catatan_hasil: '', status_sertifikat: 'Belum Terbit', no_sertifikat: '', tgl_serah: '', penerima: '', diperbarui: now() };
+      const r = { no_reg: no, waktu_daftar: now(), id_jadwal: j.id_jadwal, id_skema: j.id_skema, status_kelengkapan: 'Menunggu Pemeriksaan', catatan_kelengkapan: '', cek_berkas: '', tgl_kelengkapan: '', verifikasi_langsung: '', cek_persyaratan: '', rekomendasi_apl01: '', status_verifikasi: 'Menunggu Verifikasi', catatan_verifikasi: '', tgl_verifikasi: '', status_jadwal: 'Belum Dijadwalkan', id_asesor: '', id_tuk: '', tanggal_asesmen: '', waktu_asesmen: '', status_asesmen: 'Belum', catatan_asesmen: '', rekomendasi: '', tgl_hasil: '', link_surat_hasil: '', catatan_hasil: '', status_sertifikat: 'Belum Terbit', no_sertifikat: '', tgl_serah: '', penerima: '', diperbarui: now() };
       ['nama', 'nik', 'nim', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'email', 'hp', 'alamat', 'instansi', 'pendidikan', 'pekerjaan', 'tujuan_asesmen'].forEach(k => r[k] = String(d[k] || ''));
       r.email = r.email.toLowerCase();
-      ['file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'].forEach(k => r[k] = f[k] ? '#demo-berkas' : '');
+      ['file_apl01', 'file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'].forEach(k => r[k] = f[k] ? '#demo-berkas' : '');
       db.Pendaftaran.push(r);
       log({ username: 'publik', peran: 'Pemohon' }, 2, 'Permohonan sertifikasi diterima (APL-01)', no, 'Jadwal ' + j.id_jadwal);
       const sk = db.Skema.find(x => x.id_skema === j.id_skema) || {}, tk = db.TUK.find(x => x.id_tuk === j.id_tuk) || {};
-      return { no_reg: no, nama: r.nama, nik: r.nik.slice(0, 4) + '********' + r.nik.slice(-4), email: r.email, hp: r.hp, skema: sk.nama_skema, kode_skema: sk.kode_skema, tanggal: j.tanggal, waktu: j.waktu, tuk: tk.nama_tuk, waktu_daftar: r.waktu_daftar, status_verifikasi: r.status_verifikasi, email_terkirim: false };
+      return { no_reg: no, nama: r.nama, nik: r.nik.slice(0, 4) + '********' + r.nik.slice(-4), email: r.email, hp: r.hp, skema: sk.nama_skema, kode_skema: sk.kode_skema, tanggal: j.tanggal, waktu: j.waktu, tuk: tk.nama_tuk, waktu_daftar: r.waktu_daftar, status_verifikasi: r.status_verifikasi, status_kelengkapan: r.status_kelengkapan, email_terkirim: false };
     },
     lacak: (d) => view(cari(d.no_reg, d.email)),
+    unggahUlang: (d) => {
+      const r = cari(d.no_reg, d.email);
+      if (r.status_kelengkapan !== 'Belum Lengkap' && r.status_verifikasi !== 'Perlu Perbaikan') fail('Unggah ulang hanya bisa dilakukan bila berkas dinyatakan belum lengkap atau perlu perbaikan.');
+      const f = d.files || {}, ks = Object.keys(f).filter(k => /^file_/.test(k) && f[k]);
+      if (!ks.length) fail('Pilih minimal satu berkas untuk diunggah ulang.');
+      ks.forEach(k => r[k] = '#demo-berkas');
+      Object.assign(r, { status_kelengkapan: 'Menunggu Pemeriksaan', status_verifikasi: 'Menunggu Verifikasi', diperbarui: now() });
+      log({ username: 'publik', peran: 'Pemohon' }, 2, 'Unggah ulang berkas persyaratan', r.no_reg, ks.join(', '));
+      return { no_reg: r.no_reg, berkas: ks };
+    },
     plotting: () => {
       const S = idx(db.Skema, 'id_skema'), T = idx(db.TUK, 'id_tuk'), A = idx(db.Asesor, 'id_asesor'), J = idx(db.Jadwal, 'id_jadwal');
       return db.Pendaftaran.filter(r => r.status_jadwal === 'Terjadwal').map(r => ({ no_reg: r.no_reg, nama: mask(r.nama), id_jadwal: r.id_jadwal, jadwal_label: (S[r.id_skema] || {}).nama_skema + ' — ' + (J[r.id_jadwal] || {}).tanggal, skema: (S[r.id_skema] || {}).nama_skema, tanggal: r.tanggal_asesmen, waktu: r.waktu_asesmen, tuk: (T[r.id_tuk] || {}).nama_tuk, asesor: (A[r.id_asesor] || {}).nama_asesor }));
@@ -203,7 +220,7 @@
     summary: () => {
       const p = db.Pendaftaran, c = f => p.filter(f).length, sv = db.Survei;
       return {
-        total: p.length, menunggu_verifikasi: c(r => r.status_verifikasi === 'Menunggu Verifikasi'), perlu_perbaikan: c(r => r.status_verifikasi === 'Perlu Perbaikan'),
+        total: p.length, menunggu_kelengkapan: c(r => (r.status_kelengkapan || 'Menunggu Pemeriksaan') !== 'Lengkap' && r.status_verifikasi !== 'Tidak Memenuhi Syarat'), menunggu_verifikasi: c(r => r.status_kelengkapan === 'Lengkap' && (r.status_verifikasi === 'Menunggu Verifikasi' || r.status_verifikasi === 'Perlu Perbaikan')), perlu_perbaikan: c(r => r.status_verifikasi === 'Perlu Perbaikan'),
         siap_dijadwalkan: c(r => r.status_verifikasi === 'Memenuhi Syarat' && r.status_jadwal !== 'Terjadwal'), terjadwal: c(r => r.status_jadwal === 'Terjadwal' && !r.rekomendasi),
         kompeten: c(r => r.rekomendasi === 'Kompeten'), belum_kompeten: c(r => r.rekomendasi === 'Belum Kompeten'),
         sertifikat_proses: c(r => r.rekomendasi === 'Kompeten' && r.status_sertifikat !== 'Sudah Diserahkan'), sertifikat_diserahkan: c(r => r.status_sertifikat === 'Sudah Diserahkan'),
@@ -227,6 +244,7 @@
       const patch = {}; T.f.forEach(k => { if (v[k] !== undefined) patch[k] = String(v[k]); });
       if (T.auto) Object.assign(patch, T.auto(v));
       patch.diperbarui = now();
+      if (T.guard) regs.forEach(no => { const r = db.Pendaftaran.find(x => x.no_reg === no); if (!r) fail('Data ' + no + ' tidak ditemukan.'); T.guard(r, v, no); });
       regs.forEach(no => { const r = db.Pendaftaran.find(x => x.no_reg === no); if (!r) fail('Data ' + no + ' tidak ditemukan.'); Object.assign(r, patch); log(u, T.l, T.a(v), no, T.d ? T.d(v) : ''); });
       return { diperbarui: regs.length };
     },

@@ -10,6 +10,18 @@
   const nmAsesor = (id) => (REF.Asesor.find(s => s.id_asesor === id) || {}).nama_asesor || id || '-';
   const jadwalLabel = (id) => { const j = REF.Jadwal.find(x => x.id_jadwal === id); return j ? nmSkema(j.id_skema) + ' — ' + tgl(j.tanggal) : id || '-'; };
   const PJ = {}; SOP.langkah.forEach(l => PJ[l.no] = l.pj);
+  const BERKAS = [['file_apl01', 'FR.APL.01 bertanda tangan'], ['file_ktp', 'KTP'], ['file_foto', 'Pas foto'], ['file_ijazah', 'KHS / transkrip'], ['file_apl02', 'FR.APL.02'], ['file_pendukung', 'Surat aktif + bukti persyaratan']];
+  const syaratSkema = (id) => String((REF.Skema.find(x => x.id_skema === id) || {}).persyaratan || '').split(/\n+/).map(x => x.trim()).filter(String);
+  const kl = (r) => r.status_kelengkapan || 'Menunggu Pemeriksaan';
+  /** formData + daftar centang (data-list) + verifikasi_langsung YA/TIDAK */
+  function nilaiForm(f) {
+    const v = formData(f);
+    const lists = {};
+    $$('input[data-list]', f).forEach(c => { (lists[c.dataset.list] = lists[c.dataset.list] || []); if (c.checked) lists[c.dataset.list].push(c.value); });
+    Object.keys(lists).forEach(k => v[k] = lists[k].join(','));
+    if (typeof v.verifikasi_langsung === 'boolean') v.verifikasi_langsung = v.verifikasi_langsung ? 'YA' : 'TIDAK';
+    return v;
+  }
 
   /* ---------------- Login ---------------- */
   function loginView(msg) {
@@ -101,7 +113,7 @@
       v.innerHTML = `
         <div class="welcome"><div><h2>Selamat datang, ${esc(USER.nama)}</h2><p>${esc(USER.peran)}, bekerja mengikuti SOP ${esc(SOP.nomor)}</p></div><a class="btn sm ghost" href="index.html" target="_blank">Buka situs publik</a></div>
         <div class="grid g4" style="margin-bottom:16px">
-          ${tile('Total pendaftar', s.total, 'semua')}${tile('Menunggu verifikasi (L3)', s.menunggu_verifikasi, 'verifikasi')}
+          ${tile('Total pendaftar', s.total, 'semua')}${tile('Cek kelengkapan (L2)', s.menunggu_kelengkapan || 0, 'kelengkapan')}${tile('Verifikasi langsung (L3)', s.menunggu_verifikasi, 'verifikasi')}
           ${tile('Siap dijadwalkan (L4)', s.siap_dijadwalkan, 'jadwal')}${tile('Terjadwal / asesmen (L5–6)', s.terjadwal, 'asesmen')}
           ${tile('Kompeten (L7)', s.kompeten, 'hasil')}${tile('Sertifikat diproses (L8)', s.sertifikat_proses, 'sertifikat')}
           <div class="stat clickable" onclick="location.hash='#/keluhan'"><div class="k">Keluhan terbuka (L9)</div><div class="v">${s.keluhan_terbuka}</div></div>
@@ -117,7 +129,8 @@
       const all = await api('listPendaftar');
       const TABS = {
         semua: ['Semua', () => true],
-        verifikasi: ['L3 Verifikasi', r => r.status_verifikasi === 'Menunggu Verifikasi' || r.status_verifikasi === 'Perlu Perbaikan'],
+        kelengkapan: ['L2 Kelengkapan', r => kl(r) !== 'Lengkap' && r.status_verifikasi !== 'Tidak Memenuhi Syarat'],
+        verifikasi: ['L3 Verifikasi langsung', r => kl(r) === 'Lengkap' && (r.status_verifikasi === 'Menunggu Verifikasi' || r.status_verifikasi === 'Perlu Perbaikan')],
         jadwal: ['L4 Penjadwalan', r => r.status_verifikasi === 'Memenuhi Syarat' && r.status_jadwal !== 'Terjadwal'],
         asesmen: ['L5–6 Asesmen', r => r.status_jadwal === 'Terjadwal' && !r.rekomendasi],
         hasil: ['L7 Hasil', r => !!r.rekomendasi],
@@ -128,8 +141,8 @@
       v.innerHTML = `<div class="tabs" id="tabs"></div>
         <div class="toolbar"><input id="q" placeholder="Cari nama, No. Reg, NIK, email…"><select id="fj"><option value="">Semua jadwal</option>${REF.Jadwal.map(j => `<option value="${esc(j.id_jadwal)}">${esc(jadwalLabel(j.id_jadwal))}</option>`).join('')}</select>
         <button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
-        <div class="toolbar" id="bulk" hidden><b id="nsel"></b><button class="btn sm" id="bVer">Verifikasi…</button><button class="btn sm" id="bPlot">Tetapkan jadwal…</button><button class="btn sm" id="bAs">Status asesmen…</button><button class="btn sm ghost" id="bClr">Batal pilih</button></div>
-        <div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="ckAll"></th><th>No. Reg</th><th>Nama</th><th>Skema / jadwal</th><th>Verifikasi</th><th>Jadwal</th><th>Asesmen</th><th>Hasil</th><th>Sertifikat</th></tr></thead><tbody id="tb"></tbody></table></div>`;
+        <div class="toolbar" id="bulk" hidden><b id="nsel"></b><button class="btn sm" id="bKel">Kelengkapan…</button><button class="btn sm" id="bVer">Verifikasi…</button><button class="btn sm" id="bPlot">Tetapkan jadwal…</button><button class="btn sm" id="bAs">Status asesmen…</button><button class="btn sm ghost" id="bClr">Batal pilih</button></div>
+        <div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="ckAll"></th><th>No. Reg</th><th>Nama</th><th>Skema / jadwal</th><th>Kelengkapan</th><th>Verifikasi</th><th>Jadwal</th><th>Asesmen</th><th>Hasil</th><th>Sertifikat</th></tr></thead><tbody id="tb"></tbody></table></div>`;
       const sel = new Set();
       let rows = [];
       const draw = () => {
@@ -140,9 +153,9 @@
           <td onclick="event.stopPropagation()"><input type="checkbox" class="ck" value="${esc(r.no_reg)}" ${sel.has(r.no_reg) ? 'checked' : ''}></td>
           <td class="mono">${esc(r.no_reg)}<br><small class="muted">${tgl(r.waktu_daftar)}</small></td><td><b>${esc(r.nama)}</b><br><small class="muted">${esc(r.email)}</small></td>
           <td>${esc(nmSkema(r.id_skema))}<br><small class="muted">${esc(jadwalLabel(r.id_jadwal))}</small></td>
-          <td>${badge(r.status_verifikasi)}</td><td>${badge(r.status_jadwal)}${r.tanggal_asesmen ? '<br><small>' + tgl(r.tanggal_asesmen) + '</small>' : ''}</td>
+          <td>${badge(kl(r))}</td><td>${badge(r.status_verifikasi)}</td><td>${badge(r.status_jadwal)}${r.tanggal_asesmen ? '<br><small>' + tgl(r.tanggal_asesmen) + '</small>' : ''}</td>
           <td>${badge(r.status_asesmen)}</td><td>${r.rekomendasi ? badge(r.rekomendasi) : '<small class="muted">-</small>'}</td><td>${r.rekomendasi === 'Kompeten' ? badge(r.status_sertifikat) : '<small class="muted">-</small>'}</td></tr>`).join('')
-          : '<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>';
+          : '<tr><td colspan="10" class="empty">Tidak ada data.</td></tr>';
         $('#bulk').hidden = !sel.size;
         $('#nsel').textContent = sel.size + ' dipilih';
         $('#ckAll').checked = rows.length && rows.every(r => sel.has(r.no_reg));
@@ -153,6 +166,7 @@
       $('#tb').onchange = (e) => { if (e.target.classList.contains('ck')) { e.target.checked ? sel.add(e.target.value) : sel.delete(e.target.value); draw(); } };
       $('#ckAll').onchange = (e) => { rows.forEach(r => e.target.checked ? sel.add(r.no_reg) : sel.delete(r.no_reg)); draw(); };
       $('#bClr').onclick = () => { sel.clear(); draw(); };
+      $('#bKel').onclick = () => bulkForm([...sel], 'kelengkapan');
       $('#bVer').onclick = () => bulkForm([...sel], 'verifikasi');
       $('#bPlot').onclick = () => bulkForm([...sel], 'plotting');
       $('#bAs').onclick = () => bulkForm([...sel], 'asesmen');
@@ -267,10 +281,24 @@
     const j = REF.Jadwal.find(x => x.id_jadwal === r.id_jadwal) || {};
     const T = tahapPeserta(r);
     const head = (no, title) => `<summary><b>L${no} · ${esc(title)}</b> ${T[no] && T[no].st === 'done' ? badge('Selesai') : T[no] && T[no].st === 'fail' ? badge('Ditolak') : T[no] && T[no].st === 'now' ? badge('Diproses') : ''} <small class="muted">PJ: ${esc(PJ[no])}</small></summary>`;
-    const box = (no, title, body, open) => `<details class="card" style="padding:14px;margin-bottom:10px" ${open ? 'open' : ''}>${head(no, title)}<form class="form" style="margin-top:12px" data-tahap="${body.tahap}">${body.html}<div><button class="btn sm" type="submit">Simpan L${no}</button></div></form></details>`;
+    const box = (no, title, body, open) => `<details class="card" style="padding:14px;margin-bottom:10px" ${open ? 'open' : ''}>${head(no, title)}<form class="form" style="margin-top:12px" data-tahap="${body.tahap}">${body.html}${body.html.indexOf('Menunggu berkas dinyatakan') >= 0 ? '' : `<div><button class="btn sm" type="submit">Simpan L${no}</button></div>`}</form></details>`;
     const now = (no) => T[no] && T[no].st === 'now';
+    const cekB = String(r.cek_berkas || '').split(',');
+    const cekP = String(r.cek_persyaratan || '').split(',');
+    const syarat = syaratSkema(r.id_skema);
+    const lengkap = kl(r) === 'Lengkap';
     return [
-      box(3, 'Verifikasi persyaratan', { tahap: 'verifikasi', html: `<label class="f">Hasil verifikasi<select name="status_verifikasi">${opt(['Menunggu Verifikasi', 'Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat'], r.status_verifikasi)}</select></label><label class="f">Catatan (tampil ke peserta)<textarea name="catatan_verifikasi" style="min-height:60px">${esc(r.catatan_verifikasi)}</textarea></label>` }, now(3)),
+      box(2, 'Pemeriksaan kelengkapan berkas', { tahap: 'kelengkapan', html: `<div><b style="font-size:.88rem">Centang berkas yang sudah sesuai</b>
+        ${BERKAS.map(b => `<label class="check"><input type="checkbox" data-list="cek_berkas" value="${b[0].replace('file_', '')}" ${cekB.indexOf(b[0].replace('file_', '')) >= 0 ? 'checked' : ''} ${r[b[0]] ? '' : 'disabled'}> <span>${esc(b[1])} ${r[b[0]] ? `— <a href="${esc(r[b[0]])}" target="_blank" rel="noopener">buka</a>` : '<span class="muted">(tidak diunggah)</span>'}</span></label>`).join('')}</div>
+        <label class="f">Hasil pemeriksaan<select name="status_kelengkapan">${opt(['Menunggu Pemeriksaan', 'Lengkap', 'Belum Lengkap'], kl(r))}</select></label>
+        <label class="f">Catatan (wajib bila belum lengkap — tampil ke peserta)<textarea name="catatan_kelengkapan" style="min-height:60px">${esc(r.catatan_kelengkapan)}</textarea></label>
+        <small class="muted">Lengkap → peserta diminta datang verifikasi langsung membawa berkas asli. Belum Lengkap → peserta mengunggah ulang dari halaman Status.</small>` }, kl(r) !== 'Lengkap'),
+      box(3, 'Verifikasi langsung berkas asli', { tahap: 'verifikasi', html: lengkap ? `<label class="check"><input type="checkbox" name="verifikasi_langsung" ${r.verifikasi_langsung === 'YA' ? 'checked' : ''}> <span><b>Berkas asli sudah diperiksa dan dicocokkan dengan unggahan</b> (peserta hadir)</span></label>
+        <div><b style="font-size:.88rem">Persyaratan skema yang terpenuhi</b>${syarat.map((t, i) => `<label class="check"><input type="checkbox" data-list="cek_persyaratan" value="${i + 1}" ${cekP.indexOf(String(i + 1)) >= 0 ? 'checked' : ''}> <span>${esc(t)}</span></label>`).join('') || '<p class="muted">Persyaratan skema belum diisi.</p>'}</div>
+        <label class="f">Hasil verifikasi<select name="status_verifikasi">${opt(['Menunggu Verifikasi', 'Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat'], r.status_verifikasi)}</select></label>
+        <label class="f">Catatan (tampil ke peserta)<textarea name="catatan_verifikasi" style="min-height:60px">${esc(r.catatan_verifikasi)}</textarea></label>
+        <small class="muted">Rekomendasi APL-01 otomatis: Memenuhi Syarat → Diterima; Tidak Memenuhi Syarat → Tidak diterima.${r.rekomendasi_apl01 ? ' Saat ini: <b>' + esc(r.rekomendasi_apl01) + '</b>.' : ''}</small>`
+        : '<p class="muted" style="margin:0">Menunggu berkas dinyatakan <b>Lengkap</b> oleh Bagian Administrasi (L2).</p>' }, lengkap && now(3)),
       box(4, 'Penjadwalan: asesor & TUK', { tahap: 'plotting', html: `<div class="row"><label class="f">Asesor<select name="id_asesor"><option value="">Pilih…</option>${asesor.map(a => `<option value="${esc(a.id_asesor)}" ${a.id_asesor === r.id_asesor ? 'selected' : ''}>${esc(a.nama_asesor)}</option>`).join('')}</select></label><label class="f">TUK<select name="id_tuk">${REF.TUK.map(t => `<option value="${esc(t.id_tuk)}" ${t.id_tuk === (r.id_tuk || j.id_tuk) ? 'selected' : ''}>${esc(t.nama_tuk)}</option>`).join('')}</select></label></div><div class="row"><label class="f">Tanggal<input type="date" name="tanggal_asesmen" value="${esc(r.tanggal_asesmen || j.tanggal || '')}"></label><label class="f">Waktu<input name="waktu_asesmen" value="${esc(r.waktu_asesmen || j.waktu || '')}"></label></div>` }, now(4)),
       box(5, 'Administrasi asesmen', { tahap: 'asesmen', html: `<label class="f">Status<select name="status_asesmen">${opt(['Belum', 'Dokumen Siap'], r.status_asesmen)}</select></label><label class="f">Catatan (dokumen asesmen, daftar hadir, berita acara)<textarea name="catatan_asesmen" style="min-height:60px">${esc(r.catatan_asesmen)}</textarea></label>` }, now(5)),
       box(6, 'Pelaksanaan pelayanan sertifikasi', { tahap: 'pelaksanaan', html: `<label class="f">Kehadiran / pelaksanaan<select name="status_asesmen">${opt(['Dokumen Siap', 'Hadir', 'Tidak Hadir'], r.status_asesmen)}</select></label><label class="f">Catatan pendampingan<textarea name="catatan_asesmen" style="min-height:60px">${esc(r.catatan_asesmen)}</textarea></label>` }, now(6)),
@@ -300,7 +328,8 @@
               <dt>Pendidikan</dt><dd>${esc(r.pendidikan)} · ${esc(r.instansi)}</dd><dt>Pekerjaan</dt><dd>${esc(r.pekerjaan || '-')}</dd>
               <dt>Tujuan asesmen</dt><dd>${esc(r.tujuan_asesmen)}</dd><dt>Skema</dt><dd>${esc(nmSkema(r.id_skema))}</dd><dt>Jadwal pilihan</dt><dd>${esc(jadwalLabel(r.id_jadwal))}</dd>
               <dt>Asesor / TUK</dt><dd>${r.id_asesor ? esc(nmAsesor(r.id_asesor)) + ' · ' + esc(nmTuk(r.id_tuk)) : '-'}</dd>
-              <dt>Berkas (L2)</dt><dd style="display:flex;flex-wrap:wrap;gap:10px">${file('file_ktp', 'KTP')}${file('file_foto', 'Foto')}${file('file_ijazah', 'Ijazah/Transkrip')}${file('file_apl02', 'APL-02')}${file('file_pendukung', 'Pendukung')}</dd>
+              <dt>Berkas (L2)</dt><dd style="display:flex;flex-wrap:wrap;gap:10px">${BERKAS.map(b => file(b[0], b[1])).join('')}</dd>
+              <dt>Kelengkapan</dt><dd>${badge(kl(r))}</dd><dt>Verifikasi langsung</dt><dd>${r.verifikasi_langsung === 'YA' ? badge('YA') : '-'} ${r.rekomendasi_apl01 ? '· APL-01 ' + badge(r.rekomendasi_apl01) : ''}</dd>
             </dl></div>
             <div class="card"><h3>Status tahapan</h3><ul class="timeline">${SOP.langkah.filter(l => tahapPeserta(r)[l.no]).map(l => { const t = tahapPeserta(r)[l.no]; return `<li class="${t.st === 'done' ? 'done' : t.st === 'now' ? 'now' : t.st === 'fail' ? 'fail' : ''}"><span class="dot">${t.st === 'done' ? '✓' : l.no}</span><b>${esc(l.nama)}</b><small>${esc(t.info || '')}</small></li>`; }).join('')}</ul></div>
           </div>
@@ -317,7 +346,7 @@
       $$('form[data-tahap]', m.body).forEach(f => f.addEventListener('submit', (e) => {
         e.preventDefault();
         busy($('button[type=submit]', f), async () => {
-          try { await api('updatePendaftar', { no_regs: [no], tahap: f.dataset.tahap, nilai: formData(f) }); changed = true; toast('Tersimpan & tercatat di rekaman.', 'ok'); await load(); }
+          try { await api('updatePendaftar', { no_regs: [no], tahap: f.dataset.tahap, nilai: nilaiForm(f) }); changed = true; toast('Tersimpan & tercatat di rekaman.', 'ok'); await load(); }
           catch (err) { toast(err.message, 'bad'); }
         });
       }));
@@ -332,7 +361,10 @@
     const logo = new URL(CFG.LOGO_FULL || 'assets/img/logo-lsp.png', location.href).href;
     const row = (k, v) => `<tr><th>${esc(k)}</th><td>${esc(v || '-')}</td></tr>`;
     const status = (no) => { const t = T[no]; if (!t) return 'Tidak berlaku'; return ({ done: 'Selesai', now: 'Dalam proses', fail: 'Tidak lanjut', skip: 'Tidak berlaku', wait: 'Belum' }[t.st] || '-') + (t.info ? ' — ' + t.info : ''); };
-    const berkas = [['file_ktp', 'Scan KTP'], ['file_foto', 'Pas foto'], ['file_ijazah', 'Ijazah / transkrip / KHS'], ['file_apl02', 'APL-02'], ['file_pendukung', 'Bukti persyaratan skema']];
+    const berkas = BERKAS;
+    const cekB = String(r.cek_berkas || '').split(',');
+    const cekP = String(r.cek_persyaratan || '').split(',');
+    const syarat = syaratSkema(r.id_skema);
     const sekarang = new Date();
     const tglCetak = tgl(sekarang.getFullYear() + '-' + String(sekarang.getMonth() + 1).padStart(2, '0') + '-' + String(sekarang.getDate()).padStart(2, '0')) + ', ' + String(sekarang.getHours()).padStart(2, '0') + '.' + String(sekarang.getMinutes()).padStart(2, '0');
     const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Rekaman ${esc(r.no_reg)}</title><style>
@@ -375,24 +407,31 @@
         ${row('Keputusan', r.rekomendasi || 'Belum ada')}${row('No. sertifikat', r.no_sertifikat)}
       </table>
 
-      <h2>B. Kelengkapan berkas (L2)</h2>
-      <table><thead><tr><th style="width:8%">No</th><th>Berkas</th><th style="width:22%">Status</th></tr></thead><tbody>
-        ${berkas.map((b, i) => `<tr><td>${i + 1}</td><td>${b[1]}</td><td>${r[b[0]] ? 'Diunggah' : 'Tidak ada'}</td></tr>`).join('')}
+      <h2>B. Pemeriksaan kelengkapan berkas (L2)</h2>
+      <table><thead><tr><th style="width:7%">No</th><th>Berkas</th><th style="width:18%">Unggahan</th><th style="width:18%">Diperiksa</th></tr></thead><tbody>
+        ${berkas.map((b, i) => `<tr><td>${i + 1}</td><td>${b[1]}</td><td>${r[b[0]] ? 'Diunggah' : 'Tidak ada'}</td><td>${cekB.indexOf(b[0].replace('file_', '')) >= 0 ? 'Sesuai' : '-'}</td></tr>`).join('')}
       </tbody></table>
+      <p class="catatan"><b>Hasil:</b> ${esc(r.status_kelengkapan || 'Menunggu Pemeriksaan')}${r.tgl_kelengkapan ? ' (' + esc(tgl(r.tgl_kelengkapan)) + ')' : ''}${r.catatan_kelengkapan ? ' — ' + esc(r.catatan_kelengkapan) : ''}</p>
 
-      <h2>C. Status tahapan sesuai SOP</h2>
+      <h2>C. Verifikasi langsung berkas asli (L3)</h2>
+      <table><thead><tr><th style="width:7%">No</th><th>Persyaratan skema</th><th style="width:18%">Terpenuhi</th></tr></thead><tbody>
+        ${syarat.map((t, i) => `<tr><td>${i + 1}</td><td>${esc(t)}</td><td>${cekP.indexOf(String(i + 1)) >= 0 ? 'Ya' : '-'}</td></tr>`).join('') || '<tr><td colspan="3">Persyaratan skema belum diisi.</td></tr>'}
+      </tbody></table>
+      <p class="catatan"><b>Berkas asli dicocokkan:</b> ${r.verifikasi_langsung === 'YA' ? 'Ya' : 'Belum'} &nbsp; <b>Hasil:</b> ${esc(r.status_verifikasi || '-')}${r.tgl_verifikasi ? ' (' + esc(tgl(r.tgl_verifikasi)) + ')' : ''} &nbsp; <b>Rekomendasi APL-01:</b> ${esc(r.rekomendasi_apl01 || '-')}</p>
+
+      <h2>D. Status tahapan sesuai SOP</h2>
       <table><thead><tr><th style="width:7%">L</th><th style="width:30%">Langkah</th><th style="width:22%">Penanggung jawab</th><th>Status</th></tr></thead><tbody>
         ${SOP.langkah.filter(l => l.no >= 2 && l.no <= 8).map(l => `<tr><td>${l.no}</td><td>${esc(l.nama)}</td><td>${esc(l.pj)}</td><td>${esc(status(l.no))}</td></tr>`).join('')}
       </tbody></table>
       ${r.catatan_verifikasi ? `<p class="catatan"><b>Catatan verifikasi:</b> ${esc(r.catatan_verifikasi)}</p>` : ''}
       ${r.catatan_hasil ? `<p class="catatan"><b>Catatan hasil:</b> ${esc(r.catatan_hasil)}</p>` : ''}
 
-      <h2>D. Rekaman aktivitas pelayanan (L10)</h2>
+      <h2>E. Rekaman aktivitas pelayanan (L10)</h2>
       <table><thead><tr><th style="width:5%">No</th><th style="width:19%">Waktu</th><th style="width:6%">L</th><th>Aktivitas</th><th style="width:24%">Dilakukan oleh</th></tr></thead><tbody>
         ${d.logs.map((l, i) => `<tr><td>${i + 1}</td><td>${tgl(l.waktu)}</td><td>${esc(l.langkah_sop)}</td><td>${esc(l.aksi)}${l.detail ? '<br>' + esc(l.detail) : ''}</td><td>${esc(l.aktor)}<br>${esc(l.peran)}</td></tr>`).join('') || '<tr><td colspan="5">Belum ada rekaman.</td></tr>'}
       </tbody></table>
 
-      ${d.layanan.length || d.keluhan.length ? `<h2>E. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
+      ${d.layanan.length || d.keluhan.length ? `<h2>F. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
         ${d.layanan.map(x => `<tr><td>${esc(x.no_layanan)}</td><td>${esc(x.jenis)}</td><td>${esc(x.status)}</td></tr>`).join('')}
         ${d.keluhan.map(x => `<tr><td>${esc(x.no_tiket)}</td><td>Keluhan: ${esc(x.kategori)}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : ''}
 
@@ -410,7 +449,8 @@
   function bulkForm(regs, tahap) {
     const opt = (a) => a.map(o => `<option>${esc(o)}</option>`).join('');
     const html = {
-      verifikasi: `<label class="f">Hasil verifikasi<select name="status_verifikasi">${opt(['Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat', 'Menunggu Verifikasi'])}</select></label><label class="f">Catatan<textarea name="catatan_verifikasi"></textarea></label>`,
+      kelengkapan: `<label class="f">Hasil pemeriksaan kelengkapan<select name="status_kelengkapan">${opt(['Lengkap', 'Belum Lengkap', 'Menunggu Pemeriksaan'])}</select></label><label class="f">Catatan (wajib bila belum lengkap)<textarea name="catatan_kelengkapan"></textarea></label>`,
+      verifikasi: `<label class="check"><input type="checkbox" name="verifikasi_langsung"> <span>Berkas asli seluruh peserta terpilih sudah diperiksa langsung</span></label><label class="f">Hasil verifikasi<select name="status_verifikasi">${opt(['Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat', 'Menunggu Verifikasi'])}</select></label><label class="f">Catatan<textarea name="catatan_verifikasi"></textarea></label>`,
       plotting: `<div class="row"><label class="f">Asesor<select name="id_asesor" required><option value="">Pilih…</option>${REF.Asesor.map(a => `<option value="${esc(a.id_asesor)}">${esc(a.nama_asesor)}</option>`).join('')}</select></label><label class="f">TUK<select name="id_tuk">${REF.TUK.map(t => `<option value="${esc(t.id_tuk)}">${esc(t.nama_tuk)}</option>`).join('')}</select></label></div><div class="row"><label class="f">Tanggal<input type="date" name="tanggal_asesmen" required></label><label class="f">Waktu<input name="waktu_asesmen"></label></div>`,
       asesmen: `<label class="f">Status asesmen<select name="status_asesmen">${opt(['Dokumen Siap', 'Hadir', 'Tidak Hadir', 'Belum'])}</select></label><label class="f">Catatan<textarea name="catatan_asesmen"></textarea></label>`
     }[tahap];
@@ -420,7 +460,7 @@
       e.preventDefault();
       busy($('#fB button', m.el), async () => {
         try {
-          const nilai = formData($('#fB', m.el));
+          const nilai = nilaiForm($('#fB', m.el));
           const t = realTahap || (['Hadir', 'Tidak Hadir'].indexOf(nilai.status_asesmen) >= 0 ? 'pelaksanaan' : 'asesmen');
           const r = await api('updatePendaftar', { no_regs: regs, tahap: t, nilai });
           toast(r.diperbarui + ' peserta diperbarui.', 'ok'); m.close(); route();
@@ -481,7 +521,7 @@
     const rows = await api('listSheet', { sheet });
     const disp = (k, val) => k === 'id_skema' ? esc(nmSkema(val)) : k === 'id_tuk' ? esc(nmTuk(val)) : /tanggal|batas/.test(k) ? tgl(val) : k === 'status' ? badge(val) : esc(String(val || '').slice(0, 120));
     v.innerHTML = `<div class="card"><div class="card-head"><h3>${rows.length} data ${esc(sheet)}</h3><div style="display:flex;gap:8px"><button class="btn sm ghost" id="exp">${icon('download')} CSV</button>${sheet !== 'Pengaturan' || USER.peran === 'Admin' ? `<button class="btn sm" id="add">${icon('plus')} Tambah</button>` : ''}</div></div>
-      ${sheet === 'Pengaturan' ? '<div class="notice info">Kunci yang tampil di situs publik: nama_lsp, nama_singkat, tagline, deskripsi, nomor_lisensi, alamat, email, telepon, whatsapp, jam_layanan, pengumuman, link_template_apl02, info_pengambilan_sertifikat.</div>' : ''}
+      ${sheet === 'Pengaturan' ? '<div class="notice info">Kunci yang tampil di situs publik: nama_lsp, nama_singkat, tagline, deskripsi, nomor_lisensi, alamat, email, telepon, whatsapp, jam_layanan, pengumuman, link_template_apl02, info_pengambilan_sertifikat, info_verifikasi_langsung.</div>' : ''}
       <div class="table-wrap"><table><thead><tr>${M.cols.map(c => `<th>${esc(c.replace(/_/g, ' '))}</th>`).join('')}</tr></thead><tbody>
       ${rows.map(r => `<tr class="clickable" data-k="${esc(r[M.key])}">${M.cols.map(c => `<td>${disp(c, r[c])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${M.cols.length}" class="empty">Belum ada data.</td></tr>`}
       </tbody></table></div></div>`;

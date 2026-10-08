@@ -54,9 +54,9 @@
 
   function badge(s) {
     const map = {
-      ok: ['Memenuhi Syarat', 'Terjadwal', 'Kompeten', 'Sudah Diserahkan', 'Selesai', 'Dibuka', 'Aktif', 'Hadir', 'YA'],
-      warn: ['Menunggu Verifikasi', 'Perlu Perbaikan', 'Diajukan ke BNSP', 'Diproses', 'Dokumen Siap', 'Belum Dijadwalkan', 'Diterima'],
-      bad: ['Tidak Memenuhi Syarat', 'Belum Kompeten', 'Ditolak', 'Ditutup', 'Tidak Hadir', 'Nonaktif', 'TIDAK'],
+      ok: ['Lengkap', 'Diterima', 'Memenuhi Syarat', 'Terjadwal', 'Kompeten', 'Sudah Diserahkan', 'Selesai', 'Dibuka', 'Aktif', 'Hadir', 'YA'],
+      warn: ['Menunggu Pemeriksaan', 'Belum Lengkap', 'Menunggu Verifikasi', 'Perlu Perbaikan', 'Diajukan ke BNSP', 'Diproses', 'Dokumen Siap', 'Belum Dijadwalkan', 'Diterima'],
+      bad: ['Tidak diterima', 'Tidak Memenuhi Syarat', 'Belum Kompeten', 'Ditolak', 'Ditutup', 'Tidak Hadir', 'Nonaktif', 'TIDAK'],
       info: ['Siap Diambil', 'Selesai Asesmen']
     };
     let cls = '';
@@ -205,8 +205,8 @@
     ],
     langkah: [
       { no: 1, nama: 'Pelayanan Informasi Sertifikasi', instruksi: ['Memberikan informasi terkait skema sertifikasi, persyaratan, biaya, jadwal, dan proses sertifikasi kepada pemohon.', 'Menyediakan formulir dan panduan sertifikasi.'], media: 'Brosur/panduan sertifikasi, formulir pendaftaran', pj: 'Sekretariat LSP', fitur: ['Skema Sertifikasi', 'Jadwal', 'Dokumen Mutu'], link: '#/skema' },
-      { no: 2, nama: 'Penerimaan Permohonan Sertifikasi', instruksi: ['Menerima dokumen permohonan sertifikasi dari peserta.', 'Memeriksa kelengkapan administrasi dan persyaratan peserta.', 'Memberikan nomor registrasi peserta.'], media: 'Formulir APL 01 dan APL 02, daftar registrasi peserta', pj: 'Bagian Administrasi', fitur: ['Formulir Pendaftaran Online', 'Nomor Registrasi Otomatis'], link: '#/jadwal' },
-      { no: 3, nama: 'Verifikasi Persyaratan Peserta', instruksi: ['Memverifikasi dokumen peserta sesuai persyaratan skema sertifikasi.', 'Mengonfirmasi kesesuaian bukti kompetensi peserta.'], media: 'Hasil verifikasi dokumen', pj: 'Bagian Sertifikasi', fitur: ['Status Pendaftaran'], link: '#/status' },
+      { no: 2, nama: 'Penerimaan Permohonan Sertifikasi', instruksi: ['Menerima dokumen permohonan sertifikasi dari peserta.', 'Memeriksa kelengkapan administrasi dan persyaratan peserta.', 'Memberikan nomor registrasi peserta.'], media: 'Formulir APL 01 dan APL 02, daftar registrasi peserta', pj: 'Bagian Administrasi', fitur: ['Formulir Pendaftaran Online + APL-01', 'Nomor Registrasi Otomatis', 'Pemeriksaan Kelengkapan Berkas'], link: '#/jadwal' },
+      { no: 3, nama: 'Verifikasi Persyaratan Peserta', instruksi: ['Memverifikasi dokumen peserta sesuai persyaratan skema sertifikasi.', 'Mengonfirmasi kesesuaian bukti kompetensi peserta.'], media: 'Hasil verifikasi dokumen', pj: 'Bagian Sertifikasi', fitur: ['Verifikasi Langsung Berkas Asli', 'Rekomendasi APL-01'], link: '#/status' },
       { no: 4, nama: 'Penjadwalan Sertifikasi', instruksi: ['Menyusun jadwal asesmen kompetensi.', 'Menentukan asesor kompetensi dan TUK sesuai skema sertifikasi.', 'Menyampaikan jadwal kepada peserta.'], media: 'Jadwal asesmen kompetensi', pj: 'Bagian Sertifikasi', fitur: ['Plotting Jadwal & TUK'], link: '#/plotting' },
       { no: 5, nama: 'Pelayanan Administrasi Asesmen', instruksi: ['Menyiapkan dokumen asesmen dan administrasi kegiatan sertifikasi.', 'Menyediakan kebutuhan administrasi selama asesmen berlangsung.'], media: 'Dokumen asesmen dan administrasi', pj: 'Sekretariat LSP', fitur: ['Status Pendaftaran'], link: '#/status' },
       { no: 6, nama: 'Pelaksanaan Pelayanan Sertifikasi', instruksi: ['Mendampingi peserta selama proses sertifikasi berlangsung.', 'Memberikan pelayanan yang adil, profesional, dan bebas diskriminasi.', 'Menjaga kerahasiaan data peserta.'], media: 'Rekaman pelayanan sertifikasi', pj: 'Bagian Sertifikasi', fitur: ['Status Pendaftaran'], link: '#/status' },
@@ -225,10 +225,13 @@
     const as = r.status_asesmen || 'Belum';
     const s = (st, info) => ({ st, info: info || '' });
     const out = {};
-    out[2] = s('done', 'Terdaftar ' + tgl(r.waktu_daftar));
-    out[3] = v === 'Memenuhi Syarat' ? s('done', 'Memenuhi syarat' + (r.tgl_verifikasi ? ' · ' + tgl(r.tgl_verifikasi) : ''))
+    const kl = r.status_kelengkapan || 'Menunggu Pemeriksaan';
+    out[2] = kl === 'Lengkap' ? s('done', 'Berkas lengkap' + (r.tgl_kelengkapan ? ' · ' + tgl(r.tgl_kelengkapan) : ''))
+      : kl === 'Belum Lengkap' ? s('now', 'Berkas belum lengkap — unggah ulang') : s('now', 'Terdaftar ' + tgl(r.waktu_daftar) + ' · menunggu pemeriksaan kelengkapan');
+    out[3] = v === 'Memenuhi Syarat' ? s('done', 'Lolos verifikasi langsung' + (r.tgl_verifikasi ? ' · ' + tgl(r.tgl_verifikasi) : ''))
       : v === 'Tidak Memenuhi Syarat' ? s('fail', 'Tidak memenuhi syarat')
-        : v === 'Perlu Perbaikan' ? s('now', 'Perlu perbaikan dokumen') : s('now', 'Menunggu verifikasi admin');
+        : v === 'Perlu Perbaikan' ? s('now', 'Perlu perbaikan dokumen')
+          : kl === 'Lengkap' ? s('now', 'Datang untuk verifikasi langsung dengan berkas asli') : s('wait', '');
     const verOk = v === 'Memenuhi Syarat';
     out[4] = r.status_jadwal === 'Terjadwal' ? s('done', tgl(r.tanggal_asesmen, true) + (r.waktu_asesmen ? ' · ' + r.waktu_asesmen : '')) : s(verOk ? 'now' : 'wait', verOk ? 'Menunggu penetapan asesor & TUK' : '');
     const terjadwal = r.status_jadwal === 'Terjadwal';

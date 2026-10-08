@@ -384,3 +384,5 @@ td.mono { white-space: nowrap; }
 .hero-logo { height: 84px; width: auto; display: block; margin-bottom: 20px; }
 .login-logo { height: 96px; width: auto; display: block; margin-bottom: 18px; }
 @media (max-width: 860px) { .hero-logo { height: 64px; } }
+.mini-alur { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.mini-alur span { background: #fff; border: 1px solid #f3dcb1; border-radius: 999px; padding: 3px 10px; font-size: .82rem; font-weight: 600; }

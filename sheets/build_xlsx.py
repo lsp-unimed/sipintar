@@ -28,7 +28,9 @@ SHEETS = {
     'status_jadwal', 'id_asesor', 'id_tuk', 'tanggal_asesmen', 'waktu_asesmen',
     'status_asesmen', 'catatan_asesmen',
     'rekomendasi', 'tgl_hasil', 'link_surat_hasil', 'catatan_hasil',
-    'status_sertifikat', 'no_sertifikat', 'tgl_serah', 'penerima', 'diperbarui'],
+    'status_sertifikat', 'no_sertifikat', 'tgl_serah', 'penerima', 'diperbarui',
+    'file_apl01', 'status_kelengkapan', 'catatan_kelengkapan', 'cek_berkas', 'tgl_kelengkapan',
+    'verifikasi_langsung', 'cek_persyaratan', 'rekomendasi_apl01'],
   'Keluhan': ['no_tiket', 'waktu', 'nama', 'email', 'hp', 'no_reg', 'kategori', 'isi', 'status', 'tindak_lanjut', 'tgl_selesai', 'petugas'],
   'Layanan': ['no_layanan', 'waktu', 'jenis', 'nama', 'email', 'hp', 'no_reg', 'no_sertifikat', 'skema', 'keterangan', 'file', 'status', 'catatan_petugas', 'tgl_selesai', 'petugas'],
   'Survei': ['waktu', 'no_reg', 'skor_informasi', 'skor_administrasi', 'skor_asesmen', 'skor_petugas', 'skor_keseluruhan', 'saran'],
@@ -93,6 +95,7 @@ put(wb['Pengaturan'], [
   dict(kunci='pengumuman', nilai='Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.', keterangan='Tampil di beranda'),
   dict(kunci='link_template_apl02', nilai='', keterangan='Opsional. Template APL-02 per skema diisi di sheet Dokumen'),
   dict(kunci='kirim_email', nilai='YA', keterangan='YA = kirim email otomatis (bukti daftar, verifikasi, jadwal, hasil, sertifikat siap). TIDAK = matikan'),
+  dict(kunci='info_verifikasi_langsung', nilai='Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', keterangan='Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'),
   dict(kunci='info_pengambilan_sertifikat', nilai='Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.', keterangan=''),
 ], fill_cols=())
 for r in (6, 9):
@@ -146,6 +149,9 @@ wb['Dokumen']['F2'].comment = Comment('Link Google Drive dengan akses "Siapa saj
 
 # ---------- Validasi sheet transaksi ----------
 P = wb['Pendaftaran']
+dv(P, 'status_kelengkapan', ['Menunggu Pemeriksaan', 'Lengkap', 'Belum Lengkap'])
+dv(P, 'verifikasi_langsung', ['YA', 'TIDAK'])
+dv(P, 'rekomendasi_apl01', ['Diterima', 'Tidak diterima'])
 dv(P, 'status_verifikasi', ['Menunggu Verifikasi', 'Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat'])
 dv(P, 'status_jadwal', ['Belum Dijadwalkan', 'Terjadwal'])
 dv(P, 'status_asesmen', ['Belum', 'Dokumen Siap', 'Hadir', 'Tidak Hadir', 'Selesai'])
