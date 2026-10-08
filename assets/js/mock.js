@@ -20,6 +20,7 @@
         email: 'lspunimed@unimed.ac.id', telepon: '', whatsapp: '', jam_layanan: 'Senin–Jumat, 08.00–16.00 WIB',
         pengumuman: 'Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.',
         link_template_apl02: '', info_pengambilan_sertifikat: 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.',
+        link_contoh_apl01: '', link_contoh_apl02: '',
         info_verifikasi_langsung: 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.'
       },
       Skema: SEED.skema.map((k, i) => ({

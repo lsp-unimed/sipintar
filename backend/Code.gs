@@ -72,7 +72,8 @@ const ST = {
 };
 
 const PUBLIC_SETTINGS = ['nama_lsp', 'nama_singkat', 'tagline', 'deskripsi', 'nomor_lisensi', 'alamat', 'email', 'telepon',
-  'whatsapp', 'jam_layanan', 'pengumuman', 'link_template_apl02', 'info_pengambilan_sertifikat', 'info_verifikasi_langsung'];
+  'whatsapp', 'jam_layanan', 'pengumuman', 'link_template_apl02', 'info_pengambilan_sertifikat', 'info_verifikasi_langsung',
+  'link_contoh_apl01', 'link_contoh_apl02'];
 
 /* ================================ ROUTER ================================ */
 
@@ -722,7 +723,9 @@ function resetPasswordAdmin() {
 /** Tambahkan kunci Pengaturan baru pada spreadsheet lama tanpa mengubah isian yang ada. */
 function ensureSettings_() {
   const ada = settings_();
-  [['info_verifikasi_langsung', 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', 'Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)']]
+  [['info_verifikasi_langsung', 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', 'Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'],
+   ['link_contoh_apl01', '', 'Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'],
+   ['link_contoh_apl02', '', 'Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)']]
     .forEach(r => { if (!(r[0] in ada)) append_('Pengaturan', { kunci: r[0], nilai: r[1], keterangan: r[2] }); });
 }
 
@@ -742,6 +745,8 @@ function seed_() {
       ['jam_layanan', 'Senin–Jumat, 08.00–16.00 WIB', ''],
       ['pengumuman', 'Seluruh informasi resmi sertifikasi, pengumuman, dan jadwal final disampaikan melalui email yang Anda daftarkan. Pastikan email aktif.', ''],
       ['link_template_apl02', '', 'Link unduhan template APL-02 (Google Drive)'],
+      ['link_contoh_apl01', '', 'Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'],
+      ['link_contoh_apl02', '', 'Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)'],
       ['info_verifikasi_langsung', 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', 'Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'],
       ['kirim_email', 'YA', 'YA = kirim email otomatis ke peserta (bukti daftar, verifikasi, jadwal, hasil, sertifikat)'],
       ['info_pengambilan_sertifikat', 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.', '']

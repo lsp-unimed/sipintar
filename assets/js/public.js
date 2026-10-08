@@ -128,6 +128,12 @@
       || D.dokumen.find(x => re.test(x.nomor + ' ' + x.judul) && x.link && !x.id_skema);
     return d ? d.link : '';
   }
+  /** Tautan contoh pengisian APL-01 & APL-02 (Pengaturan: link_contoh_apl01 / link_contoh_apl02). */
+  function contohApl(D) {
+    const p = D.pengaturan || {};
+    const l = (k, t) => p[k] ? `<a href="${esc(p[k])}" target="_blank" rel="noopener">${t}</a>` : `${t} <span class="muted">(segera tersedia)</span>`;
+    return `<b>Contoh pengisian:</b> ${l('link_contoh_apl01', 'Contoh FR.APL.01')} · ${l('link_contoh_apl02', 'Contoh FR.APL.02')}`;
+  }
   function persiapanBerkas(D, idSkema) {
     const apl01 = linkDok(D, /APL.?01/i, idSkema);
     const a = (href, t) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${t}</a>` : t;
@@ -135,9 +141,10 @@
     return `<div class="card" style="background:var(--amber-soft);border-color:#f3dcb1">
       <h3 style="margin-top:0">Siapkan berkas sebelum mendaftar</h3>
       <p style="margin-bottom:8px">Pendaftaran dilakukan sekali isi. Pindai (scan) berkas berikut terlebih dahulu dalam format <b>PDF, JPG, atau PNG, maksimal ${CFG.MAX_FILE_MB || 2} MB per berkas</b>:</p>
+      <div class="notice" style="margin:0 0 10px;background:#fff"><b>Formulir FR.APL.01 dan FR.APL.02 wajib dicetak dan diisi dengan tulisan tangan</b> (tidak diketik), ditandatangani asli, lalu dipindai (scan) untuk diunggah. Formulir aslinya dibawa saat verifikasi langsung.<br>${contohApl(D)}</div>
       <ol style="margin:0 0 10px;padding-left:20px">
-        <li><b>FR.APL.01</b> Permohonan Sertifikasi — diisi lengkap dan <b>ditandatangani</b>. ${apl01 ? 'Unduh template: ' + a(apl01, 'FR.APL.01') : 'Template tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
-        <li><b>FR.APL.02</b> Asesmen Mandiri sesuai skema yang dipilih — template di ${a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu')}.</li>
+        <li><b>FR.APL.01</b> Permohonan Sertifikasi — dicetak, diisi tulisan tangan, dan <b>ditandatangani</b>. ${apl01 ? 'Unduh template: ' + a(apl01, 'FR.APL.01') : 'Template tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
+        <li><b>FR.APL.02</b> Asesmen Mandiri sesuai skema yang dipilih — dicetak dan diisi tulisan tangan. Template di ${a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu')}.</li>
         <li>KTP dan pas foto berwarna terbaru.</li>
         <li>KHS / transkrip dengan nilai minimal B pada mata kuliah yang disyaratkan skema.</li>
         <li>Surat keterangan mahasiswa aktif dari Dekan, serta bukti magang/PKLI atau sertifikat pelatihan — gabungkan dalam satu PDF.</li>
@@ -342,7 +349,7 @@
     dokumen(D, args) {
       const pre = args[0] || '';
       const nmS = (id) => (D.skema.find(x => x.id_skema === id) || {}).nama_skema || id;
-      view.innerHTML = `<div class="toolbar"><label class="f" style="flex:1 1 320px">Tampilkan formulir untuk skema
+      view.innerHTML = `<div class="notice" style="margin-bottom:14px"><b>FR.APL.01 dan FR.APL.02 dicetak dan diisi dengan tulisan tangan</b> (tidak diketik), ditandatangani asli, lalu dipindai untuk diunggah saat pendaftaran.<br>${contohApl(D)}</div><div class="toolbar"><label class="f" style="flex:1 1 320px">Tampilkan formulir untuk skema
         <select id="dkS"><option value="">Semua skema</option>${D.skema.map(s => `<option value="${esc(s.id_skema)}" ${pre === s.id_skema ? 'selected' : ''}>${esc(s.nama_skema)}</option>`).join('')}</select></label></div><div id="dkL"></div>`;
       const draw = () => {
         const s = $('#dkS').value;
@@ -411,7 +418,8 @@
           <p class="muted" style="margin:0">Formulir khusus skema ini tersedia di <a href="#/dokumen/${esc(j.id_skema)}" target="_blank">Dokumen mutu</a>.</p>
         </div></fieldset>
         <fieldset><legend>Dokumen persyaratan</legend><div class="form">
-          <div class="row">${file('file_apl01', 'FR.APL.01 yang telah diisi dan ditandatangani', true, apl01 ? `Unduh template: <a href="${esc(apl01)}" target="_blank" rel="noopener">FR.APL.01</a> · PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB` : '')}${file('file_apl02', 'FR.APL.02 (asesmen mandiri) yang telah diisi', false, apl02 ? `Unduh template: <a href="${esc(apl02)}" target="_blank" rel="noopener">FR.APL.02</a>` : '')}</div>
+          <div class="row">${file('file_apl01', 'Scan FR.APL.01 (tulisan tangan, ditandatangani)', true, (apl01 ? `Template: <a href="${esc(apl01)}" target="_blank" rel="noopener">FR.APL.01</a> · ` : '') + (D.pengaturan.link_contoh_apl01 ? `<a href="${esc(D.pengaturan.link_contoh_apl01)}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}${file('file_apl02', 'Scan FR.APL.02 (tulisan tangan)', false, (apl02 ? `Template: <a href="${esc(apl02)}" target="_blank" rel="noopener">FR.APL.02</a> · ` : '') + (D.pengaturan.link_contoh_apl02 ? `<a href="${esc(D.pengaturan.link_contoh_apl02)}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}</div>
+          <p class="muted" style="margin:0">FR.APL.01 dan FR.APL.02 dicetak, diisi dengan tulisan tangan (tidak diketik), ditandatangani, lalu dipindai.</p>
           <div class="row">${file('file_ktp', 'Scan KTP', true)}${file('file_foto', 'Pas foto berwarna', true, 'JPG/PNG latar merah/biru, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
           <div class="row">${file('file_ijazah', 'KHS / transkrip nilai', false)}${file('file_pendukung', 'Surat aktif kuliah + bukti magang/PKLI atau sertifikat pelatihan', false, 'Gabungkan dalam satu PDF, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
           <p class="muted" style="margin:0">Berkas asli wajib dibawa saat verifikasi langsung.</p>

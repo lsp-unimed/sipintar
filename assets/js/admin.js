@@ -521,7 +521,7 @@
     const rows = await api('listSheet', { sheet });
     const disp = (k, val) => k === 'id_skema' ? esc(nmSkema(val)) : k === 'id_tuk' ? esc(nmTuk(val)) : /tanggal|batas/.test(k) ? tgl(val) : k === 'status' ? badge(val) : esc(String(val || '').slice(0, 120));
     v.innerHTML = `<div class="card"><div class="card-head"><h3>${rows.length} data ${esc(sheet)}</h3><div style="display:flex;gap:8px"><button class="btn sm ghost" id="exp">${icon('download')} CSV</button>${sheet !== 'Pengaturan' || USER.peran === 'Admin' ? `<button class="btn sm" id="add">${icon('plus')} Tambah</button>` : ''}</div></div>
-      ${sheet === 'Pengaturan' ? '<div class="notice info">Kunci yang tampil di situs publik: nama_lsp, nama_singkat, tagline, deskripsi, nomor_lisensi, alamat, email, telepon, whatsapp, jam_layanan, pengumuman, link_template_apl02, info_pengambilan_sertifikat, info_verifikasi_langsung.</div>' : ''}
+      ${sheet === 'Pengaturan' ? '<div class="notice info">Kunci yang tampil di situs publik: nama_lsp, nama_singkat, tagline, deskripsi, nomor_lisensi, alamat, email, telepon, whatsapp, jam_layanan, pengumuman, link_template_apl02, info_pengambilan_sertifikat, info_verifikasi_langsung, link_contoh_apl01, link_contoh_apl02.</div>' : ''}
       <div class="table-wrap"><table><thead><tr>${M.cols.map(c => `<th>${esc(c.replace(/_/g, ' '))}</th>`).join('')}</tr></thead><tbody>
       ${rows.map(r => `<tr class="clickable" data-k="${esc(r[M.key])}">${M.cols.map(c => `<td>${disp(c, r[c])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${M.cols.length}" class="empty">Belum ada data.</td></tr>`}
       </tbody></table></div></div>`;

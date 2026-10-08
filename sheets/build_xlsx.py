@@ -95,6 +95,8 @@ put(wb['Pengaturan'], [
   dict(kunci='pengumuman', nilai='Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.', keterangan='Tampil di beranda'),
   dict(kunci='link_template_apl02', nilai='', keterangan='Opsional. Template APL-02 per skema diisi di sheet Dokumen'),
   dict(kunci='kirim_email', nilai='YA', keterangan='YA = kirim email otomatis (bukti daftar, verifikasi, jadwal, hasil, sertifikat siap). TIDAK = matikan'),
+  dict(kunci='link_contoh_apl01', nilai='', keterangan='Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'),
+  dict(kunci='link_contoh_apl02', nilai='', keterangan='Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)'),
   dict(kunci='info_verifikasi_langsung', nilai='Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', keterangan='Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'),
   dict(kunci='info_pengambilan_sertifikat', nilai='Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.', keterangan=''),
 ], fill_cols=())
