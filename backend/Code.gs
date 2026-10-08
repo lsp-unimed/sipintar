@@ -160,7 +160,8 @@ const PUBLIC = {
         kompeten: daftar.filter(r => r.rekomendasi === 'Kompeten').length
       }
     };
-    cache.put('publicData', JSON.stringify(res), 600); // 10 menit; dihapus otomatis setiap ada perubahan data
+    try { cache.put('publicData', JSON.stringify(res), 600); } // 10 menit; dihapus otomatis setiap ada perubahan data
+    catch (e) { /* data > 100 KB tidak bisa di-cache; tetap dikirim tanpa cache */ }
     return res;
   },
 
@@ -173,49 +174,75 @@ const PUBLIC = {
     if (!d.setuju) throw new Error('Anda harus menyetujui pernyataan pendaftaran.');
     if (!d.setuju_persyaratan) throw new Error('Centang pernyataan bahwa Anda memenuhi persyaratan skema.');
 
-    return withLock_(() => {
+    const files = d.files || {};
+    if (!files.file_apl01) throw new Error('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
+    if (!files.file_ktp) throw new Error('Scan KTP wajib diunggah.');
+    if (!files.file_foto) throw new Error('Pas foto wajib diunggah.');
+    const nik = String(d.nik).trim();
+
+    // 1) Cek cepat tanpa kunci — gagal lebih awal sebelum berkas diunggah
+    const cekJadwal = () => {
       const jadwal = rows_('Jadwal').find(r => r.id_jadwal === d.id_jadwal);
       if (!jadwal) throw new Error('Jadwal tidak ditemukan.');
       const daftar = rows_('Pendaftaran');
       const isi = daftar.filter(r => r.id_jadwal === d.id_jadwal && r.status_verifikasi !== 'Tidak Memenuhi Syarat').length;
       if (!jadwalBuka_(jadwal, isi)) throw new Error('Pendaftaran untuk jadwal ini sudah ditutup atau kuota penuh.');
-      const dobel = daftar.find(r => r.id_jadwal === d.id_jadwal && String(r.nik) === String(d.nik).trim() && r.status_verifikasi !== 'Tidak Memenuhi Syarat');
+      const dobel = daftar.find(r => r.id_jadwal === d.id_jadwal && String(r.nik) === nik && r.status_verifikasi !== 'Tidak Memenuhi Syarat');
       if (dobel) throw new Error('NIK ini sudah terdaftar pada jadwal yang sama (No. Registrasi ' + dobel.no_reg + ').');
+      return jadwal;
+    };
+    cekJadwal();
 
-      const noReg = nextId_('REG', 'LSPU-' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMM') + '-', 4);
-      const files = d.files || {};
-      const simpan = {};
+    // 2) Unggah berkas ke folder sementara DI LUAR kunci, agar pendaftar lain tidak ikut menunggu
+    const tmp = 'TMP-' + nik + '-' + Date.now();
+    const folder = uploadRoot_().createFolder(tmp);
+    const simpan = {}, dibuat = [];
+    let noReg = '', row, jadwal;
+    try {
       ['file_apl01', 'file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'].forEach(k => {
-        if (files[k]) simpan[k] = saveFile_(files[k], noReg, k.replace('file_', ''));
+        if (!files[k]) return;
+        const f = saveFileTo_(files[k], folder, tmp, k.replace('file_', ''));
+        dibuat.push(f); simpan[k] = f.getUrl();
       });
-      if (!simpan.file_ktp) throw new Error('Scan KTP wajib diunggah.');
-      if (!simpan.file_foto) throw new Error('Pas foto wajib diunggah.');
-      if (!simpan.file_apl01) throw new Error('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
 
-      const row = {
-        no_reg: noReg, waktu_daftar: now_(), id_jadwal: jadwal.id_jadwal, id_skema: jadwal.id_skema,
-        status_kelengkapan: 'Menunggu Pemeriksaan',
-        status_verifikasi: 'Menunggu Verifikasi', status_jadwal: 'Belum Dijadwalkan',
-        status_asesmen: 'Belum', rekomendasi: '', status_sertifikat: 'Belum Terbit', diperbarui: now_()
-      };
-      ['nama', 'nik', 'nim', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'email', 'hp', 'alamat', 'instansi',
-        'pendidikan', 'pekerjaan', 'tujuan_asesmen'].forEach(k => row[k] = String(d[k] || '').trim());
-      row.email = row.email.toLowerCase();
-      Object.assign(row, simpan);
-      append_('Pendaftaran', row);
-      log_({ username: 'publik', peran: 'Pemohon' }, 2, 'Permohonan sertifikasi diterima (APL-01)', noReg,
-        'Jadwal ' + jadwal.id_jadwal + ' · ' + Object.keys(simpan).length + ' berkas');
-      invalidate_();
-      const sk = rows_('Skema').find(x => x.id_skema === jadwal.id_skema) || {};
-      const tk = rows_('TUK').find(x => x.id_tuk === jadwal.id_tuk) || {};
-      const bukti = {
-        no_reg: noReg, nama: row.nama, nik: row.nik.slice(0, 4) + '********' + row.nik.slice(-4), email: row.email, hp: row.hp,
-        skema: sk.nama_skema || jadwal.id_skema, kode_skema: sk.kode_skema || '', tanggal: jadwal.tanggal, waktu: jadwal.waktu,
-        tuk: tk.nama_tuk || '', waktu_daftar: row.waktu_daftar, status_verifikasi: row.status_verifikasi
-      };
-      bukti.email_terkirim = notify_(row.email, 'Bukti pendaftaran uji kompetensi ' + noReg, buktiHtml_(bukti));
-      return bukti;
-    });
+      // 3) Bagian singkat di dalam kunci: cek ulang, nomor registrasi, tulis baris
+      withLock_(() => {
+        jadwal = cekJadwal();
+        noReg = nextId_('REG', 'LSPU-' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMM') + '-', 4);
+        row = {
+          no_reg: noReg, waktu_daftar: now_(), id_jadwal: jadwal.id_jadwal, id_skema: jadwal.id_skema,
+          status_kelengkapan: 'Menunggu Pemeriksaan',
+          status_verifikasi: 'Menunggu Verifikasi', status_jadwal: 'Belum Dijadwalkan',
+          status_asesmen: 'Belum', rekomendasi: '', status_sertifikat: 'Belum Terbit', diperbarui: now_()
+        };
+        ['nama', 'nik', 'nim', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'email', 'hp', 'alamat', 'instansi',
+          'pendidikan', 'pekerjaan', 'tujuan_asesmen'].forEach(k => row[k] = String(d[k] || '').trim());
+        row.email = row.email.toLowerCase();
+        Object.assign(row, simpan);
+        append_('Pendaftaran', row);
+        log_({ username: 'publik', peran: 'Pemohon' }, 2, 'Permohonan sertifikasi diterima (APL-01)', noReg,
+          'Jadwal ' + jadwal.id_jadwal + ' · ' + Object.keys(simpan).length + ' berkas');
+        invalidate_();
+      });
+    } catch (err) {
+      try { folder.setTrashed(true); } catch (e) { /* abaikan */ }
+      throw err;
+    }
+
+    // 4) Rapikan nama folder/berkas & kirim email — di luar kunci
+    try {
+      folder.setName(noReg);
+      dibuat.forEach(f => f.setName(String(f.getName()).replace(tmp, noReg)));
+    } catch (e) { /* nama sementara tidak mengganggu tautan */ }
+    const sk = rows_('Skema').find(x => x.id_skema === jadwal.id_skema) || {};
+    const tk = rows_('TUK').find(x => x.id_tuk === jadwal.id_tuk) || {};
+    const bukti = {
+      no_reg: noReg, nama: row.nama, nik: row.nik.slice(0, 4) + '********' + row.nik.slice(-4), email: row.email, hp: row.hp,
+      skema: sk.nama_skema || jadwal.id_skema, kode_skema: sk.kode_skema || '', tanggal: jadwal.tanggal, waktu: jadwal.waktu,
+      tuk: tk.nama_tuk || '', waktu_daftar: row.waktu_daftar, status_verifikasi: row.status_verifikasi
+    };
+    bukti.email_terkirim = notify_(row.email, 'Bukti pendaftaran uji kompetensi ' + noReg, buktiHtml_(bukti));
+    return bukti;
   },
 
   /** Pelacakan status oleh peserta (langkah 3–8). Butuh No. Registrasi + email. */
@@ -909,7 +936,7 @@ function pad_(n, w) { return String(n).padStart(w, '0'); }
 
 function withLock_(fn) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(20000)) throw new Error('Server sedang sibuk, silakan coba lagi.');
+  if (!lock.tryLock(30000)) throw new Error('Server sedang sibuk, silakan coba lagi.');
   try { return fn(); } finally { lock.releaseLock(); }
 }
 
@@ -1015,15 +1042,19 @@ function publicView_(r) {
 /** Simpan berkas base64 ke Drive: SIPINTAR_UPLOADS/<no_reg>/<jenis>.<ext> */
 function saveFile_(f, folderName, label) {
   if (!f || !f.data) return '';
+  const root = uploadRoot_();
+  const it = root.getFoldersByName(folderName);
+  const folder = it.hasNext() ? it.next() : root.createFolder(folderName);
+  return saveFileTo_(f, folder, folderName, label).getUrl();
+}
+
+/** Simpan satu berkas ke folder tertentu; mengembalikan objek File Drive. */
+function saveFileTo_(f, folder, prefix, label) {
   const ok = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png' };
   if (!ok[f.type]) throw new Error('Berkas ' + label + ' harus PDF, JPG, atau PNG.');
   const bytes = Utilities.base64Decode(String(f.data).replace(/^data:[^,]+,/, ''));
   if (bytes.length > CONFIG.MAX_FILE_MB * 1024 * 1024) throw new Error('Berkas ' + label + ' melebihi ' + CONFIG.MAX_FILE_MB + ' MB.');
-  const root = uploadRoot_();
-  const it = root.getFoldersByName(folderName);
-  const folder = it.hasNext() ? it.next() : root.createFolder(folderName);
-  const blob = Utilities.newBlob(bytes, f.type, folderName + '_' + label + '.' + ok[f.type]);
-  return folder.createFile(blob).getUrl();
+  return folder.createFile(Utilities.newBlob(bytes, f.type, prefix + '_' + label + '.' + ok[f.type]));
 }
 
 function uploadRoot_() {
