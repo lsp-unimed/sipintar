@@ -25,7 +25,7 @@
     legalisir: 'Ajukan pengesahan salinan sertifikat kompetensi yang diterbitkan melalui LSP ini.',
     rcc: 'Perpanjang sertifikat yang akan atau sudah habis masa berlakunya.',
     keluhan: 'Setiap keluhan diberi nomor tiket dan ditindaklanjuti Bagian Manajemen Mutu. Identitas pelapor dijaga.',
-    tiket: 'Masukkan nomor tiket dan email untuk melihat tanggapan petugas.',
+    tiket: 'Masukkan nomor tiket dan email untuk melihat tanggapan admin.',
     survei: 'Penilaian Anda dipakai untuk memperbaiki mutu layanan sertifikasi.',
     daftar: 'Isi data sesuai KTP. Kolom bertanda * wajib diisi.'
   };
@@ -35,8 +35,26 @@
   const root = $('#view');
   let view = root;
 
+  /* Data publik disimpan di browser agar halaman tampil seketika; versi terbaru diambil di latar. */
+  const PD_KEY = 'sipintar_pd_' + (CFG.API_URL || 'demo').slice(-24);
+  const PD_LIVE = ['beranda', 'skema', 'jadwal', 'dokumen'];
+  function pdRead() { try { const c = JSON.parse(localStorage.getItem(PD_KEY)); return c && c.data ? c.data : null; } catch (e) { return null; } }
+  function pdWrite(d) { try { localStorage.setItem(PD_KEY, JSON.stringify({ t: Date.now(), data: d })); } catch (e) { /* abaikan */ } }
+  let refreshing = false;
+  function pdRefresh() {
+    if (refreshing) return;
+    refreshing = true;
+    api('publicData').then(d => {
+      const changed = JSON.stringify(d) !== JSON.stringify(PD);
+      PD = d; pdWrite(d);
+      const page = (location.hash.replace(/^#\/?/, '') || 'beranda').split('/')[0];
+      if (changed && PD_LIVE.indexOf(page) >= 0) router(true);
+    }).catch(() => { /* tetap pakai data tersimpan */ }).finally(() => { refreshing = false; });
+  }
   async function pd(force) {
-    if (!PD || force) PD = await api('publicData');
+    if (PD && !force) return PD;
+    if (!force) { const c = pdRead(); if (c) { PD = c; pdRefresh(); return PD; } }
+    PD = await api('publicData'); pdWrite(PD);
     return PD;
   }
 
@@ -65,10 +83,10 @@
     $('#footer').innerHTML = `<div class="in">
       <div><b>SIPINTAR</b>Sistem Informasi Pemantauan dan Layanan Terintegrasi<br>${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}<br>${esc(p.alamat || '')}${p.nomor_lisensi ? '<br>Lisensi BNSP ' + esc(p.nomor_lisensi) : ''}</div>
       <div><b>Hubungi kami</b><ul>${p.email ? `<li><a href="mailto:${esc(p.email)}">${esc(p.email)}</a></li>` : ''}${p.telepon ? `<li>${esc(p.telepon)}</li>` : ''}${p.whatsapp ? `<li><a href="https://wa.me/${esc(p.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a></li>` : ''}${p.jam_layanan ? `<li>${esc(p.jam_layanan)}</li>` : ''}</ul></div>
-      <div><b>Tautan</b><ul><li><a href="#/alur">Alur layanan (SOP ${esc(SOP.nomor)})</a></li><li><a href="#/dokumen">Dokumen mutu</a></li><li><a href="#/keluhan">Sampaikan keluhan</a></li><li><a href="admin.html">Masuk petugas</a></li></ul></div></div>`;
+      <div><b>Tautan</b><ul><li><a href="#/alur">Alur layanan (SOP ${esc(SOP.nomor)})</a></li><li><a href="#/dokumen">Dokumen mutu</a></li><li><a href="#/keluhan">Sampaikan keluhan</a></li><li><a href="admin.html">Masuk admin</a></li></ul></div></div>`;
   }
 
-  async function router() {
+  async function router(silent) {
     const parts = (location.hash.replace(/^#\/?/, '') || 'beranda').split('/');
     const page = PAGES[parts[0]] ? parts[0] : 'beranda';
     const navKey = page === 'daftar' ? 'jadwal' : page;
@@ -76,7 +94,7 @@
     closeMenus();
     document.body.classList.remove('nav-open');
     $('#menuBtn').setAttribute('aria-expanded', 'false');
-    window.scrollTo(0, 0);
+    if (!silent) window.scrollTo(0, 0);
     const info = INFO[page] || INFO.beranda;
     document.title = (page === 'beranda' ? '' : info[0] + ' — ') + 'SIPINTAR LSP UNIMED';
     if (page === 'beranda') { root.innerHTML = loading(); view = root; }
@@ -115,6 +133,7 @@
     if (!w) { toast('Izinkan pop-up untuk mencetak bukti.', 'bad'); return; }
     w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Bukti pendaftaran ${esc(b.no_reg)}</title>
       <style>body{font-family:Arial,sans-serif;color:#000;margin:40px;font-size:14px}h1{font-size:20px;margin:0 0 4px}table{border-collapse:collapse;margin:18px 0;width:100%}td{border:1px solid #000;padding:8px 10px;vertical-align:top}td:first-child{width:34%}.no{font-size:26px;font-weight:bold;letter-spacing:1px;margin:14px 0}p{line-height:1.5}</style></head><body>
+      <img src="${new URL(CFG.LOGO_FULL || 'assets/img/logo-lsp.png', location.href).href}" alt="LSP UNIMED" style="height:70px;margin-bottom:12px">
       <h1>Bukti Pendaftaran Uji Kompetensi</h1><div>${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}</div>
       <div class="no">${esc(b.no_reg)}</div>
       <table>${buktiRows(b).map(r => `<tr><td>${esc(r[0])}</td><td><b>${esc(r[1])}</b></td></tr>`).join('')}</table>
@@ -184,6 +203,7 @@
       <section class="hero-wrap">${guilloche()}
         <div class="hero">
           <div>
+            <img class="hero-logo" src="${esc(CFG.LOGO_FULL || 'assets/img/logo-lsp.png')}" alt="LSP UNIMED">
             <h1>Sertifikasi kompetensi, dari pendaftaran sampai sertifikat di tangan.</h1>
             <p class="lead">Daftar uji kompetensi, pantau verifikasi dan jadwal asesmen, lihat hasil, dan lacak sertifikat BNSP Anda di ${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}.</p>
             <div class="actions"><a class="btn" href="#/jadwal">${icon('cal')} Lihat jadwal & daftar</a><a class="btn ghost" href="#/skema">${icon('book')} Pilih skema</a></div>
@@ -219,7 +239,7 @@
               <a class="btn ghost" href="#/surveilans">${icon('eye')} Surveilans</a><a class="btn ghost" href="#/rcc">${icon('refresh')} Perpanjangan</a>
             </div></div>
           <div class="card"><h3>Ada kendala pelayanan?</h3>
-            <p class="muted">Sampaikan keluhan Anda. Setiap keluhan mendapat nomor tiket dan ditanggapi petugas.</p>
+            <p class="muted">Sampaikan keluhan Anda. Setiap keluhan mendapat nomor tiket dan ditanggapi admin.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#/keluhan">${icon('chat')} Sampaikan keluhan</a><a class="btn ghost" href="#/tiket">${icon('ticket')} Lacak tiket</a></div>
             ${p.jam_layanan ? `<p class="muted" style="margin:14px 0 0">Jam layanan sekretariat: ${esc(p.jam_layanan)}</p>` : ''}</div>
         </div>
@@ -370,7 +390,7 @@
             for (const el of $$('input[type=file]', f)) if (el.files[0]) d.files[el.name] = await fileToPayload(el.files[0]);
             const r = await api('daftar', d);
             store.set('sipintar_lookup', JSON.stringify({ no_reg: r.no_reg, email: d.email.toLowerCase() }));
-            PD = null;
+            PD = null; try { localStorage.removeItem(PD_KEY); } catch (x) { /* abaikan */ }
             view.innerHTML = `<div class="card"><div class="ticket"><div class="muted">Permohonan diterima. Nomor registrasi Anda:</div>
               <div class="no mono">${esc(r.no_reg)}</div><button class="btn sm ghost" id="cp">Salin nomor</button></div>
               <dl class="kv" style="margin:18px 0">${buktiRows(r).slice(1).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl>
@@ -457,7 +477,7 @@
         <h2>Formulir keluhan pelayanan</h2>
         <div class="row"><label class="f">Nama <span class="req">*</span><input name="nama" required></label><label class="f">Email <span class="req">*</span><input type="email" name="email" required value="${esc(last.email || '')}"></label></div>
         <div class="row"><label class="f">No. HP<input name="hp"></label><label class="f">No. Registrasi (jika ada)<input name="no_reg" value="${esc(last.no_reg || '')}"></label></div>
-        <label class="f">Kategori <span class="req">*</span><select name="kategori" required><option value="">Pilih…</option><option>Informasi & pendaftaran</option><option>Administrasi & verifikasi</option><option>Jadwal & TUK</option><option>Pelaksanaan asesmen / asesor</option><option>Hasil & sertifikat</option><option>Sikap petugas</option><option>Lainnya</option></select></label>
+        <label class="f">Kategori <span class="req">*</span><select name="kategori" required><option value="">Pilih…</option><option>Informasi & pendaftaran</option><option>Administrasi & verifikasi</option><option>Jadwal & TUK</option><option>Pelaksanaan asesmen / asesor</option><option>Hasil & sertifikat</option><option>Sikap admin</option><option>Lainnya</option></select></label>
         <label class="f">Uraian keluhan <span class="req">*</span><textarea name="isi" required placeholder="Ceritakan kejadian, waktu, dan harapan penyelesaian"></textarea></label>
         <div><button class="btn" type="submit">${icon('send')} Kirim keluhan</button></div><div id="kOut"></div>
       </form>`;
@@ -484,7 +504,7 @@
           const r = await api('cekTiket', formData(f));
           $('#tOut').innerHTML = `<div class="card"><div class="card-head"><h3 class="mono">${esc(r.no)}</h3>${badge(r.status)}</div>
             <dl class="kv"><dt>Jenis</dt><dd>${esc(r.jenis)}</dd><dt>Diajukan</dt><dd>${tgl(r.waktu)}</dd><dt>Uraian</dt><dd style="font-weight:500;white-space:pre-line">${esc(r.isi)}</dd>
-            <dt>Tanggapan petugas</dt><dd style="white-space:pre-line">${esc(r.tanggapan || 'Belum ada tanggapan.')}</dd>${r.selesai ? `<dt>Selesai</dt><dd>${tgl(r.selesai)}</dd>` : ''}</dl></div>`;
+            <dt>Tanggapan admin</dt><dd style="white-space:pre-line">${esc(r.tanggapan || 'Belum ada tanggapan.')}</dd>${r.selesai ? `<dt>Selesai</dt><dd>${tgl(r.selesai)}</dd>` : ''}</dl></div>`;
         } catch (err) { $('#tOut').innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; }
       };
       f.addEventListener('submit', (e) => { e.preventDefault(); busy($('button[type=submit]', f), go); });
@@ -493,7 +513,7 @@
 
     survei() {
       const last = JSON.parse(store.get('sipintar_lookup') || '{}');
-      const q = [['skor_informasi', 'Kejelasan informasi skema, biaya, dan jadwal'], ['skor_administrasi', 'Kemudahan pendaftaran & administrasi'], ['skor_asesmen', 'Pelaksanaan asesmen (adil, objektif, tepat waktu)'], ['skor_petugas', 'Sikap dan responsivitas petugas'], ['skor_keseluruhan', 'Kepuasan keseluruhan']];
+      const q = [['skor_informasi', 'Kejelasan informasi skema, biaya, dan jadwal'], ['skor_administrasi', 'Kemudahan pendaftaran & administrasi'], ['skor_asesmen', 'Pelaksanaan asesmen (adil, objektif, tepat waktu)'], ['skor_petugas', 'Sikap dan responsivitas admin'], ['skor_keseluruhan', 'Kepuasan keseluruhan']];
       view.innerHTML = `<form class="card form" id="fS"><h2>Survei kepuasan pemohon sertifikasi</h2>
         <p class="muted">Skala 1 (sangat tidak puas) – 5 (sangat puas). Hasil survei digunakan untuk perbaikan mutu layanan.</p>
         ${q.map(x => `<div><div style="font-weight:700;margin-bottom:6px">${esc(x[1])}</div><div class="rating">${[1, 2, 3, 4, 5].map(n => `<label><input type="radio" name="${x[0]}" value="${n}"><span>${n}</span></label>`).join('')}</div></div>`).join('')}
@@ -579,7 +599,7 @@
 
   function tiketSukses(no, email, msg) {
     view.innerHTML = `<div class="card"><div class="ticket"><div class="muted">${esc(msg)} Nomor tiket Anda:</div><div class="no mono">${esc(no)}</div><button class="btn sm ghost" id="cp">Salin nomor</button></div>
-      <p style="margin-top:16px">Pantau tanggapan petugas melalui menu Lacak Tiket menggunakan nomor tiket dan email Anda.</p>
+      <p style="margin-top:16px">Pantau tanggapan admin melalui menu Lacak Tiket menggunakan nomor tiket dan email Anda.</p>
       <a class="btn" href="#/tiket/${encodeURIComponent(no)}/${encodeURIComponent(email)}">${icon('ticket')} Lacak tiket</a></div>`;
     $('#cp').onclick = () => copy(no);
   }

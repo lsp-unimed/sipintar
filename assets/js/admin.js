@@ -1,4 +1,4 @@
-/* SIPINTAR LSP UNIMED — panel petugas (Sekretariat, Bagian Administrasi, Bagian Sertifikasi, Manajemen Mutu) */
+/* SIPINTAR LSP UNIMED — panel admin (Sekretariat, Bagian Administrasi, Bagian Sertifikasi, Manajemen Mutu) */
 (function () {
   const { api, esc, $, $$, tgl, badge, toast, modal, loading, formData, busy, csv, icon, SOP, tahapPeserta, store, DEMO, CFG } = window.S;
   const app = $('#app');
@@ -14,9 +14,10 @@
   /* ---------------- Login ---------------- */
   function loginView(msg) {
     app.innerHTML = `<div class="login-wrap">
-      <div class="login-art">${S.guilloche()}<h1>Panel petugas LSP Universitas Negeri Medan</h1><p>SIPINTAR — Sistem Informasi Pemantauan dan Layanan Terintegrasi. Verifikasi, penjadwalan, hasil, sertifikat, dan rekaman pelayanan sesuai SOP ${esc(SOP.nomor)}.</p></div>
+      <div class="login-art">${S.guilloche()}<h1>Panel admin LSP Universitas Negeri Medan</h1><p>SIPINTAR — Sistem Informasi Pemantauan dan Layanan Terintegrasi. Verifikasi, penjadwalan, hasil, sertifikat, dan rekaman pelayanan sesuai SOP ${esc(SOP.nomor)}.</p></div>
       <div class="login-side"><form class="login-card form" id="fLogin">
-      <div class="brand"><img src="${esc(CFG.LOGO_URL || 'assets/img/logo.svg')}" alt=""><div><b>SIPINTAR</b><span>Masuk petugas</span></div></div>
+      <img class="login-logo" src="${esc(CFG.LOGO_FULL || 'assets/img/logo-lsp.png')}" alt="LSP UNIMED">
+      <div class="brand"><div><b>SIPINTAR</b><span>Masuk admin</span></div></div>
       ${msg ? `<div class="notice bad">${esc(msg)}</div>` : ''}
       ${DEMO ? '<div class="notice">Mode demo: username <b>admin</b>, password <b>demo12345</b>.</div>' : ''}
       <label class="f">Username<input name="username" autocomplete="username" required></label>
@@ -51,7 +52,7 @@
 
   function shell() {
     app.innerHTML = `
-      <aside class="sidebar"><div class="brand"><img src="${esc(CFG.LOGO_URL || 'assets/img/logo.svg')}" alt=""><div><b>SIPINTAR</b><span>Panel petugas</span></div></div>
+      <aside class="sidebar"><div class="brand"><img src="${esc(CFG.LOGO_URL || 'assets/img/favicon-192.png')}" alt="Logo LSP UNIMED"><div><b>SIPINTAR</b><span>Panel admin</span></div></div>
         <nav class="nav" id="nav"></nav>
         <div class="side-foot"><b>${esc(USER.nama)}</b><br>${esc(USER.peran)}<br><a href="#" id="logout">Keluar</a> · <a href="index.html" target="_blank">Situs publik</a></div></aside>
       <div class="scrim" id="scrim"></div>
@@ -63,6 +64,7 @@
   }
 
   async function loadRef() {
+    try { REF = await api('refData'); return; } catch (e) { if (!/tidak dikenal/i.test(e.message)) throw e; }
     const [a, b, c, d] = await Promise.all(['Skema', 'TUK', 'Asesor', 'Jadwal'].map(s => api('listSheet', { sheet: s })));
     REF = { Skema: a, TUK: b, Asesor: c, Jadwal: d };
   }
@@ -197,7 +199,7 @@
 
     async survei(v) {
       const rows = await api('listSheet', { sheet: 'Survei' });
-      const K = [['skor_informasi', 'Informasi'], ['skor_administrasi', 'Administrasi'], ['skor_asesmen', 'Asesmen'], ['skor_petugas', 'Petugas'], ['skor_keseluruhan', 'Keseluruhan']];
+      const K = [['skor_informasi', 'Informasi'], ['skor_administrasi', 'Administrasi'], ['skor_asesmen', 'Asesmen'], ['skor_petugas', 'Admin'], ['skor_keseluruhan', 'Keseluruhan']];
       const avg = (k) => rows.length ? (rows.reduce((a, r) => a + Number(r[k] || 0), 0) / rows.length).toFixed(2) : '-';
       v.innerHTML = `<div class="grid g4" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px">${K.map(k => `<div class="stat"><div class="k">${k[1]}</div><div class="v">${avg(k[0])}</div></div>`).join('')}</div>
         <div class="card"><div class="card-head"><h3>${rows.length} respons</h3><button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
@@ -208,8 +210,8 @@
 
     async rekaman(v) {
       const rows = await api('listSheet', { sheet: 'Log' });
-      v.innerHTML = `<div class="notice info">Langkah 10 SOP — seluruh aktivitas pelayanan tercatat otomatis (waktu, petugas, peran, langkah SOP, referensi) sehingga mampu telusur. Data utama tersimpan di Google Spreadsheet; berkas peserta di Google Drive.</div>
-        <div class="toolbar"><input id="q" placeholder="Cari No. Reg / tiket / petugas / aktivitas…"><select id="fl"><option value="">Semua langkah</option>${SOP.langkah.map(l => `<option value="${l.no}">L${l.no} ${esc(l.nama)}</option>`).join('')}</select><button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
+      v.innerHTML = `<div class="notice info">Langkah 10 SOP — seluruh aktivitas pelayanan tercatat otomatis (waktu, admin, peran, langkah SOP, referensi) sehingga mampu telusur. Data utama tersimpan di Google Spreadsheet; berkas peserta di Google Drive.</div>
+        <div class="toolbar"><input id="q" placeholder="Cari No. Reg / tiket / admin / aktivitas…"><select id="fl"><option value="">Semua langkah</option>${SOP.langkah.map(l => `<option value="${l.no}">L${l.no} ${esc(l.nama)}</option>`).join('')}</select><button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
         <div id="lt"></div>`;
       let cur = rows;
       const draw = () => {
@@ -225,7 +227,7 @@
     async pengguna(v) {
       if (USER.peran !== 'Admin') { v.innerHTML = '<div class="notice">Pengelolaan pengguna hanya untuk peran Admin.</div>'; return; }
       const rows = await api('listUsers');
-      v.innerHTML = `<div class="card"><div class="card-head"><h3>Pengguna panel petugas</h3><button class="btn sm" id="add">${icon('plus')} Tambah</button></div>
+      v.innerHTML = `<div class="card"><div class="card-head"><h3>Pengguna panel admin</h3><button class="btn sm" id="add">${icon('plus')} Tambah</button></div>
         <div class="table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Aktif</th></tr></thead><tbody>
         ${rows.map(u => `<tr class="clickable" data-u="${esc(u.username)}"><td class="mono">${esc(u.username)}</td><td>${esc(u.nama)}</td><td>${esc(u.peran)}</td><td>${badge(u.aktif)}</td></tr>`).join('')}</tbody></table></div>
         <p class="muted" style="margin-top:12px">Peran mengikuti penanggung jawab SOP: Sekretariat LSP (L1, L5, L10), Bagian Administrasi (L2, L8), Bagian Sertifikasi (L3, L4, L6, L7), Bagian Manajemen Mutu (L9). Admin dapat melakukan semua tahap.</p></div>`;
@@ -253,7 +255,7 @@
   };
 
   function logTable(rows) {
-    return `<div class="table-wrap"><table><thead><tr><th>Waktu</th><th>L</th><th>Aktivitas</th><th>Ref</th><th>Petugas</th></tr></thead><tbody>
+    return `<div class="table-wrap"><table><thead><tr><th>Waktu</th><th>L</th><th>Aktivitas</th><th>Ref</th><th>Admin</th></tr></thead><tbody>
       ${rows.map(l => `<tr><td style="white-space:nowrap">${tgl(l.waktu)}</td><td><span class="badge info">${esc(l.langkah_sop)}</span></td><td>${esc(l.aksi)}${l.detail ? '<br><small class="muted">' + esc(l.detail) + '</small>' : ''}</td><td class="mono">${esc(l.ref)}</td><td>${esc(l.aktor)}<br><small class="muted">${esc(l.peran)}</small></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Belum ada rekaman.</td></tr>'}
     </tbody></table></div>`;
   }
@@ -364,9 +366,9 @@
       const m = modal(r[idk], `<dl class="kv"><dt>Jenis</dt><dd>${esc(isK ? 'Keluhan · ' + r.kategori : r.jenis)}</dd><dt>Waktu</dt><dd>${tgl(r.waktu)}</dd><dt>Pemohon</dt><dd>${esc(r.nama)} · ${esc(r.email)} · ${esc(r.hp)}</dd>
         ${r.no_reg ? `<dt>No. Registrasi</dt><dd class="mono">${esc(r.no_reg)}</dd>` : ''}${r.no_sertifikat ? `<dt>No. Sertifikat</dt><dd>${esc(r.no_sertifikat)}</dd>` : ''}${r.skema ? `<dt>Skema</dt><dd>${esc(r.skema)}</dd>` : ''}
         <dt>Uraian</dt><dd style="font-weight:500;white-space:pre-line">${esc(isK ? r.isi : r.keterangan)}</dd>${r.file ? `<dt>Lampiran</dt><dd><a href="${esc(r.file)}" target="_blank" rel="noopener">Buka berkas</a></dd>` : ''}
-        ${r.petugas ? `<dt>Petugas</dt><dd>${esc(r.petugas)}</dd>` : ''}</dl><hr>
+        ${r.petugas ? `<dt>Admin</dt><dd>${esc(r.petugas)}</dd>` : ''}</dl><hr>
         <form class="form" id="fT"><label class="f">Status<select name="status">${['Diterima', 'Diproses', 'Selesai', 'Ditolak'].map(s => `<option ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
-        <label class="f">${isK ? 'Tindak lanjut / tanggapan' : 'Catatan petugas'} (tampil ke pemohon)<textarea name="catatan">${esc(isK ? r.tindak_lanjut : r.catatan_petugas)}</textarea></label>
+        <label class="f">${isK ? 'Tindak lanjut / tanggapan' : 'Catatan admin'} (tampil ke pemohon)<textarea name="catatan">${esc(isK ? r.tindak_lanjut : r.catatan_petugas)}</textarea></label>
         <div><button class="btn" type="submit">Simpan</button></div></form>`);
       $('#fT', m.el).onsubmit = (ev) => {
         ev.preventDefault();

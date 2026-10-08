@@ -192,7 +192,7 @@
       const s = { username: u.username, nama: u.nama, peran: u.peran };
       sessions[token] = s;
       try { sessionStorage.setItem('sipintar_demo_sess_' + token, JSON.stringify(s)); } catch (e) { /* abaikan */ }
-      log(s, 10, 'Login petugas', u.username, '');
+      log(s, 10, 'Login admin', u.username, '');
       return { token, user: s };
     }
   };
@@ -213,6 +213,7 @@
       };
     },
     listPendaftar: () => db.Pendaftaran.slice().reverse(),
+    refData: () => ({ Skema: db.Skema, TUK: db.TUK, Asesor: db.Asesor, Jadwal: db.Jadwal }),
     detailPendaftar: (d) => {
       const r = db.Pendaftaran.find(x => x.no_reg === d.no_reg) || fail('Data tidak ditemukan.');
       return { data: r, logs: db.Log.filter(l => l.ref === d.no_reg), layanan: db.Layanan.filter(l => l.no_reg === d.no_reg), keluhan: db.Keluhan.filter(l => l.no_reg === d.no_reg) };

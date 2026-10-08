@@ -213,13 +213,13 @@
       { no: 7, nama: 'Penyampaian Hasil Sertifikasi', instruksi: ['Menyampaikan hasil sertifikasi kepada peserta secara resmi.', 'Memberikan informasi terkait hak banding dan keluhan.'], media: 'Surat pemberitahuan hasil sertifikasi', pj: 'Bagian Sertifikasi', fitur: ['Hasil Uji Kompetensi', 'Banding Asesmen'], link: '#/hasil' },
       { no: 8, nama: 'Penyerahan Sertifikat Kompetensi', instruksi: ['Menyerahkan sertifikat kompetensi kepada peserta yang dinyatakan kompeten.', 'Mendokumentasikan penyerahan sertifikat.'], media: 'Sertifikat kompetensi, tanda terima sertifikat', pj: 'Bagian Administrasi', fitur: ['Tracer Sertifikat'], link: '#/sertifikat' },
       { no: 9, nama: 'Penanganan Keluhan Pelayanan', instruksi: ['Menerima dan mencatat keluhan terkait pelayanan sertifikasi.', 'Menindaklanjuti keluhan sesuai prosedur penanganan keluhan.'], media: 'Formulir keluhan pelayanan', pj: 'Bagian Manajemen Mutu', fitur: ['Keluhan Layanan', 'Lacak Tiket'], link: '#/keluhan' },
-      { no: 10, nama: 'Pengendalian Rekaman Pelayanan', instruksi: ['Menyimpan seluruh dokumen dan rekaman pelayanan sertifikasi secara aman dan mampu telusur.', 'Menjaga kerahasiaan data dan informasi peserta.'], media: 'Arsip pelayanan sertifikasi', pj: 'Sekretariat LSP', fitur: ['Rekaman & Log (petugas)'], link: '#/alur' }
+      { no: 10, nama: 'Pengendalian Rekaman Pelayanan', instruksi: ['Menyimpan seluruh dokumen dan rekaman pelayanan sertifikasi secara aman dan mampu telusur.', 'Menjaga kerahasiaan data dan informasi peserta.'], media: 'Arsip pelayanan sertifikasi', pj: 'Sekretariat LSP', fitur: ['Rekaman & Log (admin)'], link: '#/alur' }
     ],
     dokumenTerkait: 'Formulir APL 01, APL 02, jadwal asesmen, formulir registrasi peserta, dokumen asesmen, surat hasil sertifikasi, sertifikat kompetensi, formulir keluhan pelayanan.',
     catatanMutu: 'Seluruh pelayanan kegiatan sertifikasi wajib dilaksanakan secara profesional, objektif, transparan, responsif, terdokumentasi, dan mampu telusur guna menjamin kepuasan peserta serta kesesuaian dengan persyaratan PBNSP dan ISO/IEC 17024.'
   };
 
-  /** Hitung status 10 langkah untuk satu peserta (dipakai halaman publik & petugas). */
+  /** Hitung status 10 langkah untuk satu peserta (dipakai halaman publik & admin). */
   function tahapPeserta(r) {
     const v = r.status_verifikasi;
     const as = r.status_asesmen || 'Belum';
@@ -228,7 +228,7 @@
     out[2] = s('done', 'Terdaftar ' + tgl(r.waktu_daftar));
     out[3] = v === 'Memenuhi Syarat' ? s('done', 'Memenuhi syarat' + (r.tgl_verifikasi ? ' · ' + tgl(r.tgl_verifikasi) : ''))
       : v === 'Tidak Memenuhi Syarat' ? s('fail', 'Tidak memenuhi syarat')
-        : v === 'Perlu Perbaikan' ? s('now', 'Perlu perbaikan dokumen') : s('now', 'Menunggu verifikasi petugas');
+        : v === 'Perlu Perbaikan' ? s('now', 'Perlu perbaikan dokumen') : s('now', 'Menunggu verifikasi admin');
     const verOk = v === 'Memenuhi Syarat';
     out[4] = r.status_jadwal === 'Terjadwal' ? s('done', tgl(r.tanggal_asesmen, true) + (r.waktu_asesmen ? ' · ' + r.waktu_asesmen : '')) : s(verOk ? 'now' : 'wait', verOk ? 'Menunggu penetapan asesor & TUK' : '');
     const terjadwal = r.status_jadwal === 'Terjadwal';
