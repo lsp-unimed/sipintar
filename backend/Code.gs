@@ -680,8 +680,9 @@ function setup() {
 
   seed_();
   ensureSettings_();
+  const nDok = ensureDokumenSkema_();
 
-  let pesan = 'Setup selesai.';
+  let pesan = 'Setup selesai.' + (nDok ? '\n' + nDok + ' baris formulir/contoh per skema ditambahkan di sheet Dokumen.' : '');
   if (!rows_('Pengguna').length) {
     const pw = Utilities.getUuid().replace(/-/g, '').slice(0, 10);
     const salt = Utilities.getUuid();
@@ -753,12 +754,44 @@ function rapikanBaris() {
   try { SpreadsheetApp.getUi().alert(pesan); } catch (e) { /* dari editor */ }
 }
 
+/**
+ * Pastikan setiap skema punya baris Dokumen: FR.APL.01 & FR.APL.02 (Formulir) serta
+ * contoh pengisian APL-01 & APL-02 (kategori "Contoh Pengisian"). Baris APL umum (tanpa skema)
+ * yang belum berisi link dinonaktifkan. Isian yang sudah ada tidak diubah.
+ */
+function ensureDokumenSkema_() {
+  const skema = rows_('Skema').filter(s => s.id_skema);
+  if (!skema.length) return 0;
+  const dok = rows_('Dokumen');
+  const pre = ID_PREFIX.Dokumen + '-';
+  let max = 0;
+  dok.forEach(r => { const k = String(r.id_dok); if (k.indexOf(pre) === 0) max = Math.max(max, Number(k.slice(pre.length)) || 0); });
+  const isContoh = r => /contoh/i.test(String(r.kategori));
+  const ada = (id, re, contoh) => dok.some(r => String(r.id_skema) === id && re.test(r.nomor + ' ' + r.judul) && isContoh(r) === contoh);
+  const butuh = [
+    [/APL.?01/i, false, 'FR.APL.01', 'Permohonan Sertifikasi Kompetensi (APL-01) — ', 'Formulir'],
+    [/APL.?02/i, false, 'FR.APL.02', 'Asesmen Mandiri (APL-02) — ', 'Formulir'],
+    [/APL.?01/i, true, 'FR.APL.01', 'Contoh pengisian APL-01 — ', 'Contoh Pengisian'],
+    [/APL.?02/i, true, 'FR.APL.02', 'Contoh pengisian APL-02 — ', 'Contoh Pengisian']
+  ];
+  let n = 0;
+  skema.forEach(s => butuh.forEach(b => {
+    if (ada(s.id_skema, b[0], b[1])) return;
+    append_('Dokumen', { id_dok: pre + pad_(++max, 3), nomor: b[2], judul: b[3] + s.nama_skema, kategori: b[4], id_skema: s.id_skema, link: '', status: 'Aktif' });
+    n++;
+  }));
+  // APL umum tanpa link → nonaktif, agar asesi diarahkan ke formulir per skema
+  dok.filter(r => !r.id_skema && /APL.?0[12]/i.test(r.nomor + ' ' + r.judul) && !String(r.link || '').trim() && r.status !== 'Nonaktif')
+    .forEach(r => update_('Dokumen', r.id_dok, { status: 'Nonaktif' }));
+  return n;
+}
+
 /** Tambahkan kunci Pengaturan baru pada spreadsheet lama tanpa mengubah isian yang ada. */
 function ensureSettings_() {
   const ada = settings_();
   [['info_verifikasi_langsung', 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', 'Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'],
-   ['link_contoh_apl01', '', 'Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'],
-   ['link_contoh_apl02', '', 'Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)']]
+   ['link_contoh_apl01', '', 'Opsional. Contoh umum APL-01 bila contoh per skema di sheet Dokumen belum diisi'],
+   ['link_contoh_apl02', '', 'Opsional. Contoh umum APL-02 bila contoh per skema di sheet Dokumen belum diisi']]
     .forEach(r => { if (!(r[0] in ada)) append_('Pengaturan', { kunci: r[0], nilai: r[1], keterangan: r[2] }); });
 }
 
@@ -778,8 +811,8 @@ function seed_() {
       ['jam_layanan', 'Senin–Jumat, 08.00–16.00 WIB', ''],
       ['pengumuman', 'Seluruh informasi resmi sertifikasi, pengumuman, dan jadwal final disampaikan melalui email yang Anda daftarkan. Pastikan email aktif.', ''],
       ['link_template_apl02', '', 'Link unduhan template APL-02 (Google Drive)'],
-      ['link_contoh_apl01', '', 'Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'],
-      ['link_contoh_apl02', '', 'Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)'],
+      ['link_contoh_apl01', '', 'Opsional. Contoh umum APL-01 bila contoh per skema di sheet Dokumen belum diisi'],
+      ['link_contoh_apl02', '', 'Opsional. Contoh umum APL-02 bila contoh per skema di sheet Dokumen belum diisi'],
       ['info_verifikasi_langsung', 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', 'Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'],
       ['kirim_email', 'YA', 'YA = kirim email otomatis ke peserta (bukti daftar, verifikasi, jadwal, hasil, sertifikat)'],
       ['info_pengambilan_sertifikat', 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.', '']
@@ -792,8 +825,6 @@ function seed_() {
       ['PBNSP 202', 'Pelaksanaan Sertifikasi Kompetensi', 'Acuan'],
       ['PBNSP 206', 'Sistem Manajemen Mutu LSP', 'Acuan'],
       ['ISO/IEC 17024:2012', 'Conformity Assessment – General Requirements for Bodies Operating Certification of Persons', 'Acuan'],
-      ['FR.APL.01', 'Formulir Permohonan Sertifikasi Kompetensi', 'Formulir'],
-      ['FR.APL.02', 'Formulir Asesmen Mandiri', 'Formulir']
     ].forEach((r, i) => append_('Dokumen', { id_dok: 'DOK-' + pad_(i + 1, 3), nomor: r[0], judul: r[1], kategori: r[2], id_skema: '', link: '', status: 'Aktif' }));
   }
   if (!rows_('Skema').length) {

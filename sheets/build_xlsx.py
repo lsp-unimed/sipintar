@@ -96,8 +96,8 @@ put(wb['Pengaturan'], [
   dict(kunci='pengumuman', nilai='Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.', keterangan='Tampil di beranda'),
   dict(kunci='link_template_apl02', nilai='', keterangan='Opsional. Template APL-02 per skema diisi di sheet Dokumen'),
   dict(kunci='kirim_email', nilai='YA', keterangan='YA = kirim email otomatis (bukti daftar, verifikasi, jadwal, hasil, sertifikat siap). TIDAK = matikan'),
-  dict(kunci='link_contoh_apl01', nilai='', keterangan='Link contoh pengisian FR.APL.01 (Google Drive, akses: siapa saja yang memiliki link)'),
-  dict(kunci='link_contoh_apl02', nilai='', keterangan='Link contoh pengisian FR.APL.02 (Google Drive, akses: siapa saja yang memiliki link)'),
+  dict(kunci='link_contoh_apl01', nilai='', keterangan='Opsional. Contoh umum APL-01 bila contoh per skema di sheet Dokumen belum diisi'),
+  dict(kunci='link_contoh_apl02', nilai='', keterangan='Opsional. Contoh umum APL-02 bila contoh per skema di sheet Dokumen belum diisi'),
   dict(kunci='info_verifikasi_langsung', nilai='Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.', keterangan='Tempat & waktu verifikasi langsung (tampil ke asesi dan di email)'),
   dict(kunci='info_pengambilan_sertifikat', nilai='Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.', keterangan=''),
 ], fill_cols=())
@@ -139,13 +139,15 @@ dok = [
   ('PBNSP 202', 'Pelaksanaan Sertifikasi Kompetensi', 'Acuan', ''),
   ('PBNSP 206', 'Sistem Manajemen Mutu LSP', 'Acuan', ''),
   ('ISO/IEC 17024:2012', 'Conformity Assessment – General Requirements for Bodies Operating Certification of Persons', 'Acuan', ''),
-  ('FR.APL.01', 'Formulir Permohonan Sertifikasi Kompetensi', 'Formulir', ''),
 ]
 for i, k in enumerate(SK, 1):
+    dok.append(('FR.APL.01', 'Permohonan Sertifikasi Kompetensi (APL-01) — ' + k['nama'], 'Formulir', f'SKM-{i:03d}'))
     dok.append(('FR.APL.02', 'Asesmen Mandiri (APL-02) — ' + k['nama'], 'Formulir', f'SKM-{i:03d}'))
+    dok.append(('FR.APL.01', 'Contoh pengisian APL-01 — ' + k['nama'], 'Contoh Pengisian', f'SKM-{i:03d}'))
+    dok.append(('FR.APL.02', 'Contoh pengisian APL-02 — ' + k['nama'], 'Contoh Pengisian', f'SKM-{i:03d}'))
     dok.append(('FR.SKEMA-02', 'Skema Sertifikasi ' + k['nama'], 'Skema', f'SKM-{i:03d}'))
 put(wb['Dokumen'], [dict(id_dok=f'DOK-{k:03d}', nomor=a, judul=b, kategori=c, id_skema=d, link='', status='Aktif') for k, (a, b, c, d) in enumerate(dok, 1)], fill_cols=('link',))
-dv(wb['Dokumen'], 'kategori', ['SOP', 'Acuan', 'Formulir', 'Skema', 'Panduan', 'Lainnya'])
+dv(wb['Dokumen'], 'kategori', ['SOP', 'Acuan', 'Formulir', 'Contoh Pengisian', 'Skema', 'Panduan', 'Lainnya'])
 dv(wb['Dokumen'], 'status', ['Aktif', 'Nonaktif'])
 wb['Dokumen']['E2'].comment = Comment('Kosong = dokumen umum (semua skema). Isi ID skema (mis. SKM-003) untuk formulir khusus skema.', 'SIPINTAR')
 wb['Dokumen']['F2'].comment = Comment('Link Google Drive dengan akses "Siapa saja yang memiliki link".', 'SIPINTAR')
@@ -179,7 +181,7 @@ lines = [
   ('Skema: 16 skema dan persyaratannya sudah diisi dari bagian 9.1.2 dokumen skema. Lengkapi kode skema dan jumlah unit; periksa sel persyaratan berwarna kuning (ada catatan).', False),
   ('Jadwal: 16 jadwal sudah disiapkan untuk 17 Oktober 2026 dengan TUK sesuai surat 071/LSP-UNIMED/X/2026. Periksa batas_daftar.', False),
   ('TUK dan Asesor: sudah diisi dari surat 071/LSP-UNIMED/X/2026. Lengkapi email/HP bila perlu.', False),
-  ('Dokumen: link Google Drive untuk SOP, APL-01, dan APL-02 per skema (akses "Siapa saja yang memiliki link").', False),
+  ('Dokumen: link Google Drive untuk SOP, APL-01, APL-02, dan contoh pengisian APL-01/APL-02 per skema (akses "Siapa saja yang memiliki link").', False),
   ('Pengaturan: nomor lisensi, email resmi, telepon.', False),
   ('', False),
   ('Aturan penting', True),
