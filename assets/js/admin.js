@@ -127,18 +127,20 @@
 
     async pendaftar(v, args) {
       const all = await api('listPendaftar');
+      // tiap tab = antrean yang MENUNGGU tindakan di tahap itu; peserta yang tuntas ada di "Selesai"
+      const sudahUji = r => r.status_asesmen === 'Hadir' || r.status_asesmen === 'Tidak Hadir' || r.status_asesmen === 'Selesai';
       const TABS = {
         semua: ['Semua', () => true],
         kelengkapan: ['L2 Kelengkapan', r => kl(r) !== 'Lengkap' && r.status_verifikasi !== 'Tidak Memenuhi Syarat'],
         verifikasi: ['L3 Verifikasi langsung', r => kl(r) === 'Lengkap' && (r.status_verifikasi === 'Menunggu Verifikasi' || r.status_verifikasi === 'Perlu Perbaikan')],
         jadwal: ['L4 Penjadwalan', r => r.status_verifikasi === 'Memenuhi Syarat' && r.status_jadwal !== 'Terjadwal'],
-        asesmen: ['L5–6 Asesmen', r => r.status_jadwal === 'Terjadwal' && !r.rekomendasi],
-        hasil: ['L7 Hasil', r => !!r.rekomendasi],
+        asesmen: ['L5–6 Asesmen', r => r.status_jadwal === 'Terjadwal' && !r.rekomendasi && !sudahUji(r)],
+        hasil: ['L7 Hasil', r => r.status_jadwal === 'Terjadwal' && !r.rekomendasi && sudahUji(r)],
         sertifikat: ['L8 Sertifikat', r => r.rekomendasi === 'Kompeten' && r.status_sertifikat !== 'Sudah Diserahkan'],
         selesai: ['Selesai', r => r.status_sertifikat === 'Sudah Diserahkan' || r.rekomendasi === 'Belum Kompeten' || r.status_verifikasi === 'Tidak Memenuhi Syarat']
       };
       let tab = TABS[args[0]] ? args[0] : 'semua';
-      v.innerHTML = `<div class="tabs" id="tabs"></div>
+      v.innerHTML = `<div class="tabs" id="tabs"></div><p class="muted" style="margin:-4px 0 10px;font-size:.85rem">Angka pada tab = jumlah peserta yang <b>menunggu tindakan</b> di tahap itu. Peserta yang sudah tuntas ada di tab Selesai; semua peserta ada di tab Semua.</p>
         <div class="toolbar"><input id="q" placeholder="Cari nama, No. Reg, NIK, email…"><select id="fj"><option value="">Semua jadwal</option>${REF.Jadwal.map(j => `<option value="${esc(j.id_jadwal)}">${esc(jadwalLabel(j.id_jadwal))}</option>`).join('')}</select>
         <button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
         <div class="toolbar" id="bulk" hidden><b id="nsel"></b><button class="btn sm" id="bKel">Kelengkapan…</button><button class="btn sm" id="bVer">Verifikasi…</button><button class="btn sm" id="bPlot">Tetapkan jadwal…</button><button class="btn sm" id="bAs">Status asesmen…</button><button class="btn sm ghost" id="bClr">Batal pilih</button></div>
