@@ -60,13 +60,14 @@ def sheet(name):
             ws.cell(row=r, column=i).number_format = '@'
     return ws
 
+NEXT = {}  # baris berikutnya per sheet (jangan pakai ws.append: 1000 baris sudah diformat '@')
+
 def put(ws, rows, fill_cols=()):
     head = SHEETS[ws.title]
     for row in rows:
-        ws.append([str(row.get(h, '')) for h in head])
-        r = ws.max_row
+        r = NEXT.get(ws.title, 2); NEXT[ws.title] = r + 1
         for i, h in enumerate(head, 1):
-            c = ws.cell(row=r, column=i)
+            c = ws.cell(row=r, column=i, value=str(row.get(h, '')))
             c.font = F; c.number_format = '@'
             c.alignment = Alignment(wrap_text=h in ('persyaratan', 'nilai', 'keterangan'), vertical='top')
             if h in fill_cols: c.fill = ISI_FILL

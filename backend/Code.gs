@@ -720,6 +720,39 @@ function resetPasswordAdmin() {
   Logger.log('Password baru admin: ' + pw);
 }
 
+/**
+ * RAPIKAN BARIS — jalankan SEKALI dari editor bila data di sheet tidak dimulai dari baris 2
+ * (mis. Excel awal menaruh data mulai baris 1002). Menghapus baris kosong di antara judul dan data
+ * pada semua sheet SIPINTAR. Isi data tidak diubah.
+ */
+function rapikanBaris() {
+  const ss = ss_(), laporan = [];
+  Object.keys(SHEETS).forEach(name => {
+    const s = ss.getSheetByName(name);
+    if (!s || s.getLastRow() < 2) return;
+    const last = s.getLastRow(), cols = Math.max(s.getLastColumn(), 1);
+    const v = s.getRange(2, 1, last - 1, cols).getValues();
+    // kumpulkan blok baris kosong, hapus dari bawah agar nomor baris tidak bergeser
+    const blok = []; let mulai = -1;
+    v.forEach((r, i) => {
+      const kosong = r.join('') === '';
+      if (kosong && mulai < 0) mulai = i;
+      if (!kosong && mulai >= 0) { blok.push([mulai + 2, i - mulai]); mulai = -1; }
+    });
+    let n = 0;
+    blok.reverse().forEach(b => { s.deleteRows(b[0], b[1]); n += b[1]; });
+    // sisakan cadangan 500 baris berformat teks di bawah data
+    const sisa = s.getMaxRows() - s.getLastRow();
+    if (sisa < 500) s.insertRowsAfter(s.getMaxRows(), 500 - sisa);
+    s.getRange(s.getLastRow() + 1, 1, 500, cols).setNumberFormat('@');
+    if (n) laporan.push(name + ': ' + n + ' baris kosong dihapus');
+  });
+  invalidate_();
+  const pesan = laporan.length ? 'Rapikan selesai.\n' + laporan.join('\n') : 'Semua sheet sudah rapi.';
+  Logger.log(pesan);
+  try { SpreadsheetApp.getUi().alert(pesan); } catch (e) { /* dari editor */ }
+}
+
 /** Tambahkan kunci Pengaturan baru pada spreadsheet lama tanpa mengubah isian yang ada. */
 function ensureSettings_() {
   const ada = settings_();
