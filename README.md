@@ -11,7 +11,7 @@ Sistem ini mengadopsi alur layanan digital LSP UNS dan memetakannya ke **SOP Pel
 
 ## 1. Peta SOP → fitur
 
-| Langkah SOP | Penanggung jawab | Fitur publik (asesi) | Fitur panel petugas | Rekaman |
+| Langkah SOP | Penanggung jawab | Fitur publik (asesi) | Fitur panel admin | Rekaman |
 |---|---|---|---|---|
 | 1 Pelayanan Informasi Sertifikasi | Sekretariat LSP | Beranda, Alur Layanan, Skema, Jadwal, Dokumen Mutu | Data master: Skema, Jadwal, TUK, Asesor, Dokumen, Pengaturan | Log perubahan master |
 | 2 Penerimaan Permohonan | Bagian Administrasi | Formulir APL-01 online, unggah KTP/foto/ijazah/APL-02, **No. Registrasi otomatis** | Daftar pendaftar, koreksi data | Sheet `Pendaftaran`, berkas di Drive |
@@ -32,12 +32,12 @@ Layanan tambahan yang mengikuti layanan digital LSP UNS: **Surveilans**, **Legal
 
 ```
 index.html              ← layanan publik (asesi)
-admin.html              ← panel petugas (login)
+admin.html              ← panel admin (login)
 assets/css/style.css
 assets/js/config.js     ← ISI API_URL di sini
 assets/js/core.js       ← API, utilitas, data SOP
 assets/js/public.js     ← halaman publik
-assets/js/admin.js      ← panel petugas
+assets/js/admin.js      ← panel admin
 assets/js/mock.js       ← mode demo (aktif bila API_URL kosong)
 assets/img/logo.svg     ← ganti dengan logo resmi LSP
 backend/Code.gs         ← tempel ke Apps Script
@@ -73,7 +73,7 @@ Kuota email harian Apps Script terbatas (akun Google Workspace lebih besar darip
 1. Buka `assets/js/config.js`, lalu isi `API_URL: 'https://script.google.com/macros/s/XXXX/exec'`.
 2. Ganti `assets/img/logo.svg` dengan logo resmi. Bila logo berformat PNG, sesuaikan `LOGO_URL`.
 3. Push ke GitHub. Buka **Settings → Pages → Deploy from a branch → `main` / root**.
-4. Situs akan aktif di `https://<user>.github.io/<repo>/`. Panel petugas ada di `/admin.html`.
+4. Situs akan aktif di `https://<user>.github.io/<repo>/`. Panel admin ada di `/admin.html`.
 
 **Mode demo**: selama `API_URL` kosong, situs memakai data contoh yang hanya tersimpan di browser (akun demo: `admin` / `demo12345`). Mode ini cocok untuk mencoba tampilan dan alur sebelum backend siap.
 
@@ -103,8 +103,8 @@ Kuota email harian Apps Script terbatas (akun Google Workspace lebih besar darip
 ## 7. Keamanan & kerahasiaan data
 
 - Peserta hanya bisa melihat datanya dengan **No. Registrasi + email**. Di sisi publik, NIK disamarkan dan nama di halaman plotting juga disamarkan.
-- Password petugas disimpan sebagai hash SHA-256 bergaram. Login dikunci 10 menit setelah 5 kali gagal, dan sesi berlaku 6 jam.
-- Berkas unggahan masuk ke folder Drive **`SIPINTAR_UPLOADS/<No.Reg>/`** dan **tidak dibagikan publik**. Agar petugas lain bisa membuka tautan berkas dari panel, bagikan folder tersebut ke akun Google mereka.
+- Password admin disimpan sebagai hash SHA-256 bergaram. Login dikunci 10 menit setelah 5 kali gagal, dan sesi berlaku 6 jam.
+- Berkas unggahan masuk ke folder Drive **`SIPINTAR_UPLOADS/<No.Reg>/`** dan **tidak dibagikan publik**. Agar admin lain bisa membuka tautan berkas dari panel, bagikan folder tersebut ke akun Google mereka.
 - Link **surat hasil** dan **dokumen mutu** harus diatur *siapa saja yang memiliki link* agar dapat dibuka peserta.
 - Batas unggahan per berkas 2 MB (PDF/JPG/PNG). Ubah `MAX_FILE_MB` di `Code.gs` dan `config.js` jika perlu.
 
@@ -112,7 +112,7 @@ Kuota email harian Apps Script terbatas (akun Google Workspace lebih besar darip
 
 1. **Alur Layanan (SOP)**: tunjukkan 10 langkah beserta PJ dan fitur pendukungnya.
 2. Asesi mendaftar di **Jadwal & Registrasi**, lalu menerima No. Registrasi (L2).
-3. Petugas Bag. Sertifikasi memverifikasi (L3), lalu melakukan plotting asesor + TUK (L4). Hasilnya langsung tampil di halaman **Plotting** dan **Status** asesi.
+3. Admin Bag. Sertifikasi memverifikasi (L3), lalu melakukan plotting asesor + TUK (L4). Hasilnya langsung tampil di halaman **Plotting** dan **Status** asesi.
 4. Sekretariat mengisi status dokumen asesmen (L5), lalu kehadiran dicatat (L6).
 5. Keputusan K/BK dan surat hasil diinput (L7). Halaman **Hasil** asesi menampilkan info hak banding.
 6. Sertifikat ditandai *Siap Diambil*, lalu *Sudah Diserahkan* beserta nama penerima (L8).
