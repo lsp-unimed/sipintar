@@ -81,7 +81,12 @@
 
   function footer(p) {
     $('#footer').innerHTML = `<div class="in">
-      <div><b>SIPINTAR</b>Sistem Informasi Pemantauan dan Layanan Terintegrasi<br>${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}<br>${esc(p.alamat || '')}${p.nomor_lisensi ? '<br>Lisensi BNSP ' + esc(p.nomor_lisensi) : ''}</div>
+      <div><div class="foot-logos">
+          <img src="assets/img/logo-unimed.png" alt="Universitas Negeri Medan" onerror="this.remove()">
+          <img src="assets/img/logo-lsp.png" alt="LSP Universitas Negeri Medan" onerror="this.remove()">
+          <img src="assets/img/logo-bnsp.png" alt="Badan Nasional Sertifikasi Profesi" onerror="this.remove()"></div>
+        <b>SIPINTAR</b>Sistem Informasi Pemantauan dan Layanan Terintegrasi<br>${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}<br>${esc(p.alamat || '')}
+        <span class="foot-lisensi">${p.nomor_lisensi ? 'Berlisensi BNSP No. ' + esc(p.nomor_lisensi) : 'Berlisensi Badan Nasional Sertifikasi Profesi (BNSP)'}<br><a href="https://bnsp.go.id" target="_blank" rel="noopener">www.bnsp.go.id</a></span></div>
       <div><b>Hubungi kami</b><ul>${p.email ? `<li><a href="mailto:${esc(p.email)}">${esc(p.email)}</a></li>` : ''}${p.telepon ? `<li>${esc(p.telepon)}</li>` : ''}${p.whatsapp ? `<li><a href="https://wa.me/${esc(p.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a></li>` : ''}${p.jam_layanan ? `<li>${esc(p.jam_layanan)}</li>` : ''}</ul></div>
       <div><b>Tautan</b><ul><li><a href="#/alur">Alur layanan (SOP ${esc(SOP.nomor)})</a></li><li><a href="#/dokumen">Dokumen mutu</a></li><li><a href="#/keluhan">Sampaikan keluhan</a></li><li><a href="admin.html">Masuk admin</a></li></ul></div></div>`;
   }
@@ -259,8 +264,8 @@
         <div class="hero">
           <div>
             <img class="hero-logo" src="${esc(CFG.LOGO_FULL || 'assets/img/logo-lsp.png')}" alt="LSP UNIMED">
-            <h1>Sertifikasi kompetensi, dari pendaftaran sampai sertifikat di tangan.</h1>
-            <p class="lead">Daftar uji kompetensi, pantau verifikasi dan jadwal asesmen, lihat hasil, dan lacak sertifikat BNSP Anda di ${esc(p.nama_lsp || 'LSP Universitas Negeri Medan')}.</p>
+            <h1><span class="h1-lead">Lembaga Sertifikasi Profesi (LSP) Universitas Negeri Medan:</span> buktikan kompetensi Anda, raih sertifikat kompetensi BNSP!</h1>
+            <p class="lead">Daftar uji kompetensi, pantau verifikasi dan jadwal asesmen, lihat hasil, dan lacak sertifikat Anda dalam satu layanan terintegrasi.</p>
             <div class="actions"><a class="btn" href="#/jadwal">${icon('cal')} Lihat jadwal & daftar</a><a class="btn ghost" href="#/skema">${icon('book')} Pilih skema</a></div>
           </div>
           <form class="track-card form" id="fTrack">
