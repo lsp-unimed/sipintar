@@ -93,7 +93,7 @@ put(wb['Pengaturan'], [
   dict(kunci='telepon', nilai='', keterangan=''),
   dict(kunci='whatsapp', nilai='', keterangan='Format 62812xxxx (tanpa + dan spasi)'),
   dict(kunci='jam_layanan', nilai='Senin–Jumat, 08.00–16.00 WIB', keterangan=''),
-  dict(kunci='pengumuman', nilai='Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.', keterangan='Tampil di beranda'),
+  dict(kunci='pengumuman', nilai='Silakan pelajari jadwal pelaksanaan uji kompetensi beserta persyaratan setiap skema sertifikasi sebelum melakukan pendaftaran. Informasi pada setiap tahapan pendaftaran akan disampaikan melalui email yang Saudara daftarkan, sehingga pastikan alamat email tersebut aktif. Perkembangan status permohonan juga dapat dipantau sewaktu-waktu melalui menu Lacak Permohonan di laman ini dengan menggunakan Nomor Registrasi dan email terdaftar.', keterangan='Tampil di beranda'),
   dict(kunci='link_template_apl02', nilai='', keterangan='Opsional. Template APL-02 per skema diisi di sheet Dokumen'),
   dict(kunci='kirim_email', nilai='YA', keterangan='YA = kirim email otomatis (bukti daftar, verifikasi, jadwal, hasil, sertifikat siap). TIDAK = matikan'),
   dict(kunci='link_contoh_apl01', nilai='', keterangan='Opsional. Contoh umum APL-01 bila contoh per skema di sheet Dokumen belum diisi'),

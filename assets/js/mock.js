@@ -18,7 +18,7 @@
         deskripsi: 'SIPINTAR LSP UNIMED adalah pusat layanan digital sertifikasi kompetensi: informasi skema, pendaftaran, verifikasi, penjadwalan, hasil uji, hingga pelacakan sertifikat — profesional, objektif, transparan, terdokumentasi, dan mampu telusur.',
         nomor_lisensi: '', alamat: 'Jl. William Iskandar Ps. V, Medan Estate, Deli Serdang, Sumatera Utara 20221',
         email: 'lspunimed@unimed.ac.id', telepon: '', whatsapp: '', jam_layanan: 'Senin–Jumat, 08.00–16.00 WIB',
-        pengumuman: 'Pelaksanaan Uji Kompetensi perdana untuk 16 skema dilaksanakan pada Sabtu, 17 Oktober 2026. Informasi resmi dikirim ke email yang Anda daftarkan.',
+        pengumuman: 'Silakan pelajari jadwal pelaksanaan uji kompetensi beserta persyaratan setiap skema sertifikasi sebelum melakukan pendaftaran. Informasi pada setiap tahapan pendaftaran akan disampaikan melalui email yang Saudara daftarkan, sehingga pastikan alamat email tersebut aktif. Perkembangan status permohonan juga dapat dipantau sewaktu-waktu melalui menu Lacak Permohonan di laman ini dengan menggunakan Nomor Registrasi dan email terdaftar.',
         link_template_apl02: '', info_pengambilan_sertifikat: 'Sertifikat diambil di Sekretariat LSP pada jam layanan dengan membawa KTP asli. Pengambilan oleh orang lain wajib membawa surat kuasa.',
         link_contoh_apl01: '', link_contoh_apl02: '',
         info_verifikasi_langsung: 'Verifikasi langsung berkas asli di Sekretariat LSP UNIMED, Senin–Jumat pukul 08.00–15.00 WIB, paling lambat 15 Oktober 2026.'

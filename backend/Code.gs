@@ -842,7 +842,7 @@ function seed_() {
       ['telepon', '', ''],
       ['whatsapp', '', 'Format 62812xxxx'],
       ['jam_layanan', 'Senin–Jumat, 08.00–16.00 WIB', ''],
-      ['pengumuman', 'Seluruh informasi resmi sertifikasi, pengumuman, dan jadwal final disampaikan melalui email yang Anda daftarkan. Pastikan email aktif.', ''],
+      ['pengumuman', 'Silakan pelajari jadwal pelaksanaan uji kompetensi beserta persyaratan setiap skema sertifikasi sebelum melakukan pendaftaran. Informasi pada setiap tahapan pendaftaran akan disampaikan melalui email yang Saudara daftarkan, sehingga pastikan alamat email tersebut aktif. Perkembangan status permohonan juga dapat dipantau sewaktu-waktu melalui menu Lacak Permohonan di laman ini dengan menggunakan Nomor Registrasi dan email terdaftar.', ''],
       ['link_template_apl02', '', 'Link unduhan template APL-02 (Google Drive)'],
       ['link_contoh_apl01', '', 'Opsional. Contoh umum APL-01 bila contoh per skema di sheet Dokumen belum diisi'],
       ['link_contoh_apl02', '', 'Opsional. Contoh umum APL-02 bila contoh per skema di sheet Dokumen belum diisi'],
