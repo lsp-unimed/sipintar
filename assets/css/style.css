@@ -164,7 +164,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 .site-footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 @media (max-width: 760px) { .site-footer .in { grid-template-columns: 1fr; } }
 .foot-logos { display: inline-flex; align-items: center; gap: 16px; background: #fff; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; flex-wrap: wrap; }
-.foot-logos img { height: 46px; width: auto; display: block; }
+.foot-logos img { height: 50px; width: auto; display: block; }
 .foot-lisensi { display: block; margin-top: 10px; }
 
 /* ================= Panel petugas: sidebar terang ================= */
