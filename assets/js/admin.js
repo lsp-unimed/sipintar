@@ -512,19 +512,33 @@
     Jadwal: { key: 'id_jadwal', cols: ['id_jadwal', 'id_skema', 'tanggal', 'id_tuk', 'kuota', 'batas_daftar', 'status'], f: [['id_jadwal', 'ID (otomatis)', 'id'], ['id_skema', 'Skema', 'ref:Skema', 1], ['tanggal', 'Tanggal asesmen', 'date', 1], ['waktu', 'Waktu', 'text'], ['id_tuk', 'TUK', 'ref:TUK', 1], ['kuota', 'Kuota internal (0 = tanpa batas, tidak tampil di publik)', 'number'], ['batas_daftar', 'Batas pendaftaran', 'date'], ['status', 'Status', sel('Dibuka|Ditutup|Selesai')], ['keterangan', 'Keterangan', 'text']] },
     TUK: { key: 'id_tuk', cols: ['id_tuk', 'nama_tuk', 'jenis_tuk', 'alamat', 'status'], f: [['id_tuk', 'ID (otomatis)', 'id'], ['nama_tuk', 'Nama TUK', 'text', 1], ['jenis_tuk', 'Jenis', sel('Sewaktu|Tempat Kerja|Mandiri')], ['alamat', 'Alamat', 'textarea'], ['penanggung_jawab', 'Penanggung jawab', 'text'], ['kontak', 'Kontak', 'text'], ['status', 'Status', sel('Aktif|Nonaktif')]] },
     Asesor: { key: 'id_asesor', cols: ['id_asesor', 'nama_asesor', 'no_reg_met', 'skema', 'status'], f: [['id_asesor', 'ID (otomatis)', 'id'], ['nama_asesor', 'Nama asesor', 'text', 1], ['no_reg_met', 'No. Reg. MET', 'text'], ['skema', 'ID skema yang diampu (pisahkan koma, mis. SKM-001,SKM-002)', 'text'], ['email', 'Email', 'email'], ['hp', 'HP', 'text'], ['status', 'Status', sel('Aktif|Nonaktif')]] },
-    Dokumen: { key: 'id_dok', cols: ['nomor', 'judul', 'kategori', 'id_skema', 'status'], f: [['id_dok', 'ID (otomatis)', 'id'], ['nomor', 'Nomor dokumen', 'text'], ['judul', 'Judul', 'text', 1], ['kategori', 'Kategori', sel('SOP|Acuan|Formulir|Skema|Panduan|Lainnya')], ['id_skema', 'Berlaku untuk skema (kosong = semua skema)', 'ref:Skema'], ['link', 'Link (Drive, akses publik)', 'url'], ['status', 'Status', sel('Aktif|Nonaktif')]] },
+    Dokumen: { key: 'id_dok', cols: ['nomor', 'judul', 'kategori', 'id_skema', 'link', 'status'], f: [['id_dok', 'ID (otomatis)', 'id'], ['nomor', 'Nomor dokumen', 'text'], ['judul', 'Judul', 'text', 1], ['kategori', 'Kategori', sel('SOP|Acuan|Formulir|Contoh Pengisian|Skema|Panduan|Lainnya')], ['id_skema', 'Berlaku untuk skema (kosong = semua skema)', 'ref:Skema'], ['link', 'Link (Drive, akses publik)', 'url'], ['status', 'Status', sel('Aktif|Nonaktif')]] },
     Pengaturan: { key: 'kunci', cols: ['kunci', 'nilai', 'keterangan'], f: [['kunci', 'Kunci', 'key', 1], ['nilai', 'Nilai', 'textarea'], ['keterangan', 'Keterangan', 'text']] }
   };
 
+  const DOKF = { sk: '', kat: '', kos: false }; // filter Dokumen tetap setelah simpan
   async function masterPage(v, sheet) {
     const M = MASTER[sheet];
     const rows = await api('listSheet', { sheet });
-    const disp = (k, val) => k === 'id_skema' ? esc(nmSkema(val)) : k === 'id_tuk' ? esc(nmTuk(val)) : /tanggal|batas/.test(k) ? tgl(val) : k === 'status' ? badge(val) : esc(String(val || '').slice(0, 120));
-    v.innerHTML = `<div class="card"><div class="card-head"><h3>${rows.length} data ${esc(sheet)}</h3><div style="display:flex;gap:8px"><button class="btn sm ghost" id="exp">${icon('download')} CSV</button>${sheet !== 'Pengaturan' || USER.peran === 'Admin' ? `<button class="btn sm" id="add">${icon('plus')} Tambah</button>` : ''}</div></div>
+    const canEdit = USER.peran === 'Admin' || USER.peran === 'Sekretariat LSP';
+    const disp = (k, val) => k === 'link' ? (String(val || '').trim() ? badge('Ada') : '<span class="badge warn">Belum</span>') : k === 'id_skema' ? esc(nmSkema(val)) : k === 'id_tuk' ? esc(nmTuk(val)) : /tanggal|batas/.test(k) ? tgl(val) : k === 'status' ? badge(val) : esc(String(val || '').slice(0, 120));
+    v.innerHTML = `<div class="card"><div class="card-head"><h3>${rows.length} data ${esc(sheet)}</h3><div style="display:flex;gap:8px"><button class="btn sm ghost" id="exp">${icon('download')} CSV</button>${canEdit && (sheet !== 'Pengaturan' || USER.peran === 'Admin') ? `<button class="btn sm" id="add">${icon('plus')} Tambah</button>` : ''}</div></div>
       ${sheet === 'Pengaturan' ? '<div class="notice info">Kunci yang tampil di situs publik: nama_lsp, nama_singkat, tagline, deskripsi, nomor_lisensi, alamat, email, telepon, whatsapp, jam_layanan, pengumuman, link_template_apl02, info_pengambilan_sertifikat, info_verifikasi_langsung, link_contoh_apl01, link_contoh_apl02.</div>' : ''}
-      <div class="table-wrap"><table><thead><tr>${M.cols.map(c => `<th>${esc(c.replace(/_/g, ' '))}</th>`).join('')}</tr></thead><tbody>
-      ${rows.map(r => `<tr class="clickable" data-k="${esc(r[M.key])}">${M.cols.map(c => `<td>${disp(c, r[c])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${M.cols.length}" class="empty">Belum ada data.</td></tr>`}
-      </tbody></table></div></div>`;
+      ${canEdit ? '' : '<div class="notice">Mode lihat saja. Perubahan data master dilakukan oleh Sekretariat LSP atau Admin.</div>'}
+      ${sheet === 'Dokumen' ? `<div class="notice info">Klik baris dokumen, tempel link Google Drive (akses "Siapa saja yang memiliki link"), lalu Simpan. Situs publik diperbarui paling lambat ±10 menit.</div>
+      <div class="toolbar"><label class="f" style="flex:1 1 280px">Skema<select id="mSk"><option value="">Semua (termasuk dokumen umum)</option><option value="-">Dokumen umum saja</option>${REF.Skema.map(o => `<option value="${esc(o.id_skema)}">${esc(o.nama_skema)}</option>`).join('')}</select></label>
+      <label class="f" style="flex:0 1 220px">Kategori<select id="mKat"><option value="">Semua kategori</option>${['SOP', 'Acuan', 'Formulir', 'Contoh Pengisian', 'Skema', 'Panduan', 'Lainnya'].map(o => `<option>${o}</option>`).join('')}</select></label>
+      <label class="check" style="align-self:end"><input type="checkbox" id="mKos"> <span>Hanya yang link-nya belum ada</span></label></div>` : ''}
+      <div class="table-wrap"><table><thead><tr>${M.cols.map(c => `<th>${esc(c.replace(/_/g, ' '))}</th>`).join('')}</tr></thead><tbody id="mB"></tbody></table></div></div>`;
+    const drawRows = () => {
+      let list = rows;
+      if (sheet === 'Dokumen') {
+        const sk = $('#mSk').value, kat = $('#mKat').value, kos = $('#mKos').checked;
+        list = rows.filter(r => (!sk || (sk === '-' ? !r.id_skema : r.id_skema === sk)) && (!kat || r.kategori === kat) && (!kos || !String(r.link || '').trim()));
+      }
+      $('#mB').innerHTML = list.map(r => `<tr class="${canEdit ? 'clickable' : ''}" data-k="${esc(r[M.key])}">${M.cols.map(c => `<td>${disp(c, r[c])}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${M.cols.length}" class="empty">Belum ada data.</td></tr>`;
+      if (canEdit) $$('tr[data-k]', v).forEach(tr => tr.onclick = () => open(rows.find(r => String(r[M.key]) === tr.dataset.k)));
+    };
     $('#exp').onclick = () => csv(rows, M.f.map(x => ({ key: x[0], label: x[1] })), sheet.toLowerCase() + '.csv');
     const open = (r) => {
       const isNew = !r;
@@ -547,6 +561,8 @@
         e.preventDefault();
         const bad = $$('[required]', f).find(el => !el.value.trim());
         if (bad) { bad.focus(); return toast('Lengkapi kolom bertanda *.', 'bad'); }
+        const lk = f.elements.link;
+        if (lk && lk.value.trim() && !/^https:\/\//i.test(lk.value.trim())) { lk.focus(); return toast('Link harus diawali https:// (salin dari tombol Bagikan di Google Drive).', 'bad'); }
         busy($('button[type=submit]', f), async () => {
           try { await api('saveRow', { sheet, row: formData(f), isNew }); toast('Tersimpan', 'ok'); m.close(); await loadRef(); route(); }
           catch (err) { toast(err.message, 'bad'); }
@@ -562,7 +578,11 @@
       }
     };
     const add = $('#add'); if (add) add.onclick = () => open(null);
-    $$('tr[data-k]', v).forEach(tr => tr.onclick = () => open(rows.find(r => String(r[M.key]) === tr.dataset.k)));
+    if (sheet === 'Dokumen') {
+      $('#mSk').value = DOKF.sk; $('#mKat').value = DOKF.kat; $('#mKos').checked = DOKF.kos;
+      ['#mSk', '#mKat', '#mKos'].forEach(q => $(q).onchange = () => { DOKF.sk = $('#mSk').value; DOKF.kat = $('#mKat').value; DOKF.kos = $('#mKos').checked; drawRows(); });
+    }
+    drawRows();
   }
 
   /* ---------------- Mulai ---------------- */
