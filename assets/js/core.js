@@ -251,5 +251,23 @@
     return out;
   }
 
+  /* Tabel responsif: di layar HP setiap baris tabel tampil sebagai kartu.
+   * Label kolom (teks <th>) disalin ke setiap <td> sebagai data-label untuk ditampilkan oleh CSS. */
+  function labelTabel(root) {
+    $$('.table-wrap table', root || document).forEach(t => {
+      const head = $$('thead th', t).map(th => th.textContent.trim());
+      if (!head.length) return;
+      $$('tbody tr', t).forEach(tr => {
+        if (tr.dataset.lbl === '1') return;
+        let i = 0;
+        Array.from(tr.children).forEach(td => { if (!td.hasAttribute('data-label')) td.setAttribute('data-label', head[i] || ''); i += Number(td.colSpan || 1); });
+        tr.dataset.lbl = '1';
+      });
+    });
+  }
+  let lblJadwal = 0;
+  new MutationObserver(() => { if (lblJadwal) return; lblJadwal = requestAnimationFrame(() => { lblJadwal = 0; labelTabel(); }); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+
   window.S = { CFG, DEMO, api, store, esc, safeUrl, $, $$, tgl, rupiah, today, badge, toast, modal, loading, fileToPayload, formData, busy, copy, csv, icon, guilloche, SOP, tahapPeserta };
 })();

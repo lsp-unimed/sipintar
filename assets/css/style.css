@@ -315,7 +315,7 @@ tbody tr.clickable:hover { background: #fafbfc; }
 .kv { display: grid; grid-template-columns: 170px 1fr; gap: 6px 14px; font-size: .92rem; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-weight: 600; word-break: break-word; }
-@media (max-width: 600px) { .kv { grid-template-columns: 1fr; } .kv dd { margin-bottom: 6px; } }
+@media (max-width: 600px) { .kv { grid-template-columns: minmax(0, 38%) minmax(0, 1fr); gap: 6px 10px; font-size: .88rem; } }
 
 .result-big { display: flex; gap: 16px; align-items: center; padding: 20px; border-radius: var(--r); }
 .result-big svg { width: 36px; height: 36px; flex: none; }
@@ -390,3 +390,33 @@ td.mono { white-space: nowrap; }
 @media (max-width: 860px) { .hero-logo { height: 64px; } }
 .mini-alur { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .mini-alur span { background: #fff; border: 1px solid #f3dcb1; border-radius: 999px; padding: 3px 10px; font-size: .82rem; font-weight: 600; }
+
+/* ---------- Tampilan HP (≤ 640px) ---------- */
+@media (max-width: 600px) { .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .grid.stats .stat { padding: 12px; } .grid.stats .stat .v { font-size: 1.6rem; } }
+@media (max-width: 640px) {
+  /* toolbar: kontrol memenuhi lebar, tidak melebar keluar layar */
+  .toolbar > * { min-width: 0; }
+  .toolbar label.f { flex: 1 1 100% !important; }
+  .toolbar label.f select, .toolbar label.f input { width: 100%; min-width: 0; }
+  .toolbar input:not([type=checkbox]), .toolbar select { min-width: 0; flex: 1 1 140px; }
+  /* tabel menjadi kartu per baris */
+  .table-wrap { overflow-x: visible; }
+  .table-wrap table thead { display: none; }
+  .table-wrap table, .table-wrap table tbody { display: block; width: 100%; }
+  .table-wrap table tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .table-wrap table tr:last-child { border-bottom: 0; }
+  .table-wrap table td { display: block; position: relative; padding: 4px 0 4px 36%; min-height: 1.6em; border: 0; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+  .table-wrap table td::before { content: attr(data-label); position: absolute; left: 0; top: 5px; width: 33%; color: var(--muted); font-size: .8rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+  .table-wrap table td[data-label=""] { padding-left: 0; }
+  .table-wrap table td[data-label=""]::before { display: none; }
+  .table-wrap table td.empty, .table-wrap table td[colspan] { display: block; text-align: center; }
+  .table-wrap table td[colspan]::before { display: none; }
+  .table-wrap table td.mono { white-space: normal; }
+}
+@media (max-width: 600px) {
+  .modal-back { padding: 10px 6px; }
+  .modal-head { padding: 12px 14px; }
+  .modal-body { padding: 12px; }
+  .modal-body .card { padding: 14px; }
+  .welcome { flex-wrap: wrap; gap: 10px; }
+}

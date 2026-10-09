@@ -114,7 +114,7 @@
       const tile = (k, n, tab) => `<div class="stat clickable" onclick="location.hash='#/pendaftar/${tab}'"><div class="k">${esc(k)}</div><div class="v">${n}</div></div>`;
       v.innerHTML = `
         <div class="welcome"><div><h2>Selamat datang, ${esc(USER.nama)}</h2><p>${esc(USER.peran)}, bekerja mengikuti SOP ${esc(SOP.nomor)}</p></div><a class="btn sm ghost" href="index.html" target="_blank">Buka situs publik</a></div>
-        <div class="grid g4" style="margin-bottom:16px">
+        <div class="grid g4 stats" style="margin-bottom:16px">
           ${tile('Total pendaftar', s.total, 'semua')}${tile('Cek kelengkapan (L2)', s.menunggu_kelengkapan || 0, 'kelengkapan')}${tile('Verifikasi langsung (L3)', s.menunggu_verifikasi, 'verifikasi')}
           ${tile('Siap dijadwalkan (L4)', s.siap_dijadwalkan, 'jadwal')}${tile('Terjadwal / asesmen (L5–6)', s.terjadwal, 'asesmen')}
           ${tile('Kompeten (L7)', s.kompeten, 'hasil')}${tile('Sertifikat diproses (L8)', s.sertifikat_proses, 'sertifikat')}
