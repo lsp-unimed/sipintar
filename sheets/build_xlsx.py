@@ -36,6 +36,7 @@ SHEETS = {
   'Survei': ['waktu', 'no_reg', 'skor_informasi', 'skor_administrasi', 'skor_asesmen', 'skor_petugas', 'skor_keseluruhan', 'saran'],
   'Dokumen': ['id_dok', 'nomor', 'judul', 'kategori', 'id_skema', 'link', 'status'],
   'Log': ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'],
+  'Akses': ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'],
   'Pengguna': ['username', 'nama', 'peran', 'salt', 'password_hash', 'aktif'],
 }
 WIDTH = {'nama_skema': 42, 'persyaratan': 60, 'nilai': 70, 'keterangan': 48, 'judul': 52, 'alamat': 36, 'nama_tuk': 36,

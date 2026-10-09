@@ -226,19 +226,24 @@
       $('#exp').onclick = () => csv(rows, [{ key: 'waktu' }, { key: 'no_reg' }].concat(K.map(k => ({ key: k[0], label: k[1] }))).concat([{ key: 'saran' }]), 'survei-kepuasan.csv');
     },
 
-    async rekaman(v) {
-      const rows = await api('listSheet', { sheet: 'Log' });
-      v.innerHTML = `<div class="notice info">Langkah 10 SOP — seluruh aktivitas pelayanan tercatat otomatis (waktu, admin, peran, langkah SOP, referensi) sehingga mampu telusur. Data utama tersimpan di Google Spreadsheet; berkas peserta di Google Drive.</div>
-        <div class="toolbar"><input id="q" placeholder="Cari No. Reg / tiket / admin / aktivitas…"><select id="fl"><option value="">Semua langkah</option>${SOP.langkah.map(l => `<option value="${l.no}">L${l.no} ${esc(l.nama)}</option>`).join('')}</select><button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
+    async rekaman(v, args) {
+      const bolehAkses = ['Admin', 'Sekretariat LSP', 'Bagian Manajemen Mutu'].indexOf(USER.peran) >= 0;
+      const jenis = args && args[0] === 'akses' && bolehAkses ? 'Akses' : 'Log';
+      const rows = await api('listSheet', { sheet: jenis });
+      v.innerHTML = `${bolehAkses ? `<div class="tabs" style="margin-bottom:12px"><button class="${jenis === 'Log' ? 'on' : ''}" onclick="location.hash='#/rekaman'">Rekaman pelayanan</button><button class="${jenis === 'Akses' ? 'on' : ''}" onclick="location.hash='#/rekaman/akses'">Catatan akses</button></div>` : ''}
+        <div class="notice info">${jenis === 'Log'
+          ? 'Langkah 10 SOP — seluruh aktivitas pelayanan tercatat otomatis (waktu, admin, peran, langkah SOP, referensi) sehingga mampu telusur. Sheet rekaman dilindungi: hanya sistem yang dapat menulis. Rekaman peserta yang sudah selesai lebih dari 12 bulan dipindah ke file arsip tahunan.'
+          : 'Catatan akses — login, logout, pembukaan berkas peserta, dan pengelolaan akun. Dipisah dari rekaman pelayanan agar rekaman tetap ringkas; catatan lebih dari 3 bulan dipindah ke file arsip tahunan.'}</div>
+        <div class="toolbar"><input id="q" placeholder="Cari No. Reg / tiket / admin / aktivitas…">${jenis === 'Log' ? `<select id="fl"><option value="">Semua langkah</option>${SOP.langkah.map(l => `<option value="${l.no}">L${l.no} ${esc(l.nama)}</option>`).join('')}</select>` : ''}<button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
         <div id="lt"></div>`;
       let cur = rows;
       const draw = () => {
-        const q = $('#q').value.toLowerCase(), l = $('#fl').value;
+        const q = $('#q').value.toLowerCase(), l = $('#fl') ? $('#fl').value : '';
         cur = rows.filter(r => (!l || String(r.langkah_sop) === l) && (!q || [r.ref, r.aktor, r.aksi, r.detail].join(' ').toLowerCase().indexOf(q) >= 0));
         $('#lt').innerHTML = logTable(cur.slice(0, 500)) + (cur.length > 500 ? `<p class="muted">Menampilkan 500 dari ${cur.length}. Gunakan filter atau unduh CSV.</p>` : '');
       };
-      $('#q').oninput = draw; $('#fl').onchange = draw;
-      $('#exp').onclick = () => csv(cur, ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'].map(k => ({ key: k })), 'rekaman-pelayanan.csv');
+      $('#q').oninput = draw; if ($('#fl')) $('#fl').onchange = draw;
+      $('#exp').onclick = () => csv(cur, ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'].map(k => ({ key: k })), jenis === 'Log' ? 'rekaman-pelayanan.csv' : 'catatan-akses.csv');
       draw();
     },
 

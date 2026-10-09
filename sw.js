@@ -3,19 +3,19 @@
  * Catatan: permintaan ke Apps Script (script.google.com) TIDAK di-cache,
  * selalu lewat jaringan supaya data sertifikasi tetap segar.
  */
-const CACHE = 'sipintar-v4';
+const CACHE = 'sipintar-v5';
 const CORE = [
   './',
   './index.html',
   './admin.html',
   './manifest.webmanifest',
-  './assets/css/style.css?v=20261010c',
-  './assets/js/config.js?v=20261010c',
-  './assets/js/seed-data.js?v=20261010c',
-  './assets/js/mock.js?v=20261010c',
-  './assets/js/core.js?v=20261010c',
-  './assets/js/public.js?v=20261010c',
-  './assets/js/admin.js?v=20261010c',
+  './assets/css/style.css?v=20261010d',
+  './assets/js/config.js?v=20261010d',
+  './assets/js/seed-data.js?v=20261010d',
+  './assets/js/mock.js?v=20261010d',
+  './assets/js/core.js?v=20261010d',
+  './assets/js/public.js?v=20261010d',
+  './assets/js/admin.js?v=20261010d',
   './assets/img/favicon-192.png',
   './assets/img/favicon-512.png',
   './assets/img/logo-lsp.png'

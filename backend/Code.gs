@@ -21,7 +21,9 @@ const CONFIG = {
   UPLOAD_FOLDER_ID: '',    // kosongkan → folder "SIPINTAR_UPLOADS" dibuat otomatis di Drive pemilik
   MAX_FILE_MB: 2,          // batas ukuran per berkas unggahan
   SESSION_SECONDS: 21600,  // 6 jam (batas maksimum CacheService)
-  INGAT_HARI: 7,           // "Ingat saya di perangkat ini": lama sesi (hari)
+  INGAT_HARI: 7,
+  SIMPAN_LOG_BULAN: 12,    // rekaman pelayanan peserta yang sudah selesai disimpan di Log selama ini, lalu diarsipkan
+  SIMPAN_AKSES_BULAN: 3,   // catatan akses (login, buka berkas) disimpan di sheet Akses selama ini, lalu diarsipkan           // "Ingat saya di perangkat ini": lama sesi (hari)
   TZ: 'Asia/Jakarta'
 };
 
@@ -48,6 +50,7 @@ const SHEETS = {
   Survei: ['waktu', 'no_reg', 'skor_informasi', 'skor_administrasi', 'skor_asesmen', 'skor_petugas', 'skor_keseluruhan', 'saran'],
   Dokumen: ['id_dok', 'nomor', 'judul', 'kategori', 'id_skema', 'link', 'status'],
   Log: ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'],
+  Akses: ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'],
   Pengguna: ['username', 'nama', 'peran', 'salt', 'password_hash', 'aktif']
 };
 
@@ -57,7 +60,8 @@ const KEY = { Pengaturan: 'kunci', Skema: 'id_skema', TUK: 'id_tuk', Asesor: 'id
 const ID_PREFIX = { Skema: 'SKM', TUK: 'TUK', Asesor: 'ASR', Jadwal: 'JDW', Dokumen: 'DOK' };
 
 const MASTER_SHEETS = ['Skema', 'TUK', 'Asesor', 'Jadwal', 'Dokumen', 'Pengaturan'];
-const READABLE_SHEETS = MASTER_SHEETS.concat(['Keluhan', 'Layanan', 'Survei', 'Log']);
+const READABLE_SHEETS = MASTER_SHEETS.concat(['Keluhan', 'Layanan', 'Survei', 'Log', 'Akses']);
+const PERAN_LIHAT_AKSES = ['Admin', 'Sekretariat LSP', 'Bagian Manajemen Mutu']; // catatan akses (login, buka berkas)
 
 const PERAN = ['Admin', 'Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Bagian Manajemen Mutu'];
 
@@ -393,7 +397,7 @@ const PUBLIC = {
         exp: Date.now() + (ingat ? CONFIG.INGAT_HARI * 86400000 : CONFIG.SESSION_SECONDS * 1000) };
       simpanSesi_(token, sess);
       try { bersihkanSesi_(); } catch (e) { /* abaikan */ }
-      log_(sess, 10, 'Login admin' + (ingat ? ' (ingat perangkat ' + CONFIG.INGAT_HARI + ' hari)' : ''), user.username, '');
+      akses_(sess, 'Login admin' + (ingat ? ' (ingat perangkat ' + CONFIG.INGAT_HARI + ' hari)' : ''), user.username, '');
       return { token: token, user: { username: sess.username, nama: sess.nama, peran: sess.peran } };
     });
   }
@@ -404,7 +408,7 @@ const PUBLIC = {
 const ADMIN = {
   me: { fn: (d, u) => ({ username: u.username, nama: u.nama, peran: u.peran }) },
 
-  logout: { fn: (d, u) => { hapusSesi_(u._token); log_(u, 10, 'Logout admin', u.username, ''); return true; } },
+  logout: { fn: (d, u) => { hapusSesi_(u._token); akses_(u, 'Logout admin', u.username, ''); return true; } },
 
   /** Ringkasan dasbor admin. */
   summary: {
@@ -447,7 +451,7 @@ const ADMIN = {
     fn: (d) => {
       const r = rows_('Pendaftaran').find(x => x.no_reg === d.no_reg);
       if (!r) throw new Error('Data tidak ditemukan.');
-      const logs = rows_('Log').filter(l => l.ref === d.no_reg);
+      const logs = riwayat_(r);
       const lay = rows_('Layanan').filter(l => l.no_reg === d.no_reg).map(strip_);
       const kel = rows_('Keluhan').filter(l => l.no_reg === d.no_reg).map(strip_);
       return { data: strip_(r), logs: logs, layanan: lay, keluhan: kel };
@@ -477,7 +481,7 @@ const ADMIN = {
       const blob = file.getBlob();
       const bytes = blob.getBytes();
       if (bytes.length > 15 * 1024 * 1024) throw new Error('Berkas terlalu besar untuk ditampilkan.');
-      log_(u, 10, 'Membuka berkas ' + kolom.replace('file_', '').toUpperCase(), d.id, file.getName());
+      akses_(u, 'Membuka berkas ' + kolom.replace('file_', '').toUpperCase(), d.id, file.getName());
       return { nama: file.getName(), tipe: blob.getContentType(), data: Utilities.base64Encode(bytes) };
     }
   },
@@ -521,10 +525,11 @@ const ADMIN = {
 
   /** Baca sheet (master, keluhan, layanan, survei, log). */
   listSheet: {
-    fn: (d) => {
+    fn: (d, u) => {
       if (READABLE_SHEETS.indexOf(d.sheet) < 0) throw new Error('Sheet tidak diizinkan.');
+      if (d.sheet === 'Akses' && PERAN_LIHAT_AKSES.indexOf(u.peran) < 0) throw new Error('Catatan akses hanya dapat dilihat Admin, Sekretariat LSP, dan Bagian Manajemen Mutu.');
       let r = rows_(d.sheet).map(strip_);
-      if (d.sheet === 'Log') r = r.slice(-1000).reverse();
+      if (d.sheet === 'Log' || d.sheet === 'Akses') r = r.slice(-1000).reverse();
       return r;
     }
   },
@@ -615,7 +620,7 @@ const ADMIN = {
           if (!d.password) throw new Error('Password wajib untuk pengguna baru.');
           append_('Pengguna', Object.assign({ username: un }, patch));
         }
-        log_(u, 10, (ada ? 'Ubah' : 'Tambah') + ' pengguna', un, d.peran);
+        akses_(u, (ada ? 'Ubah' : 'Tambah') + ' pengguna', un, d.peran + (patch.aktif === 'TIDAK' ? ' (nonaktif)' : '') + (d.password ? ' · password diatur ulang' : ''));
         return true;
       });
     }
@@ -631,7 +636,7 @@ const ADMIN = {
       cabutSesi_(u.username); // sesi lain (perangkat lain / token bocor) ikut berakhir
       // sesi saat ini tetap aktif
       simpanSesi_(u._token, { username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000, ingat: !!u.ingat, exp: Number(u.exp) || (Date.now() + CONFIG.SESSION_SECONDS * 1000) });
-      log_(u, 10, 'Ganti password', u.username, '');
+      akses_(u, 'Ganti password', u.username, '');
       return true;
     }
   }
@@ -772,9 +777,11 @@ function setup() {
 
   seed_();
   ensureSettings_();
+  const nAkses = pisahkanAkses_();
+  lindungiLog_(ss_());
   const nDok = ensureDokumenSkema_();
 
-  let pesan = 'Setup selesai.' + (nDok ? '\n' + nDok + ' baris formulir/contoh per skema ditambahkan di sheet Dokumen.' : '');
+  let pesan = 'Setup selesai.' + (nAkses ? '\n' + nAkses + ' catatan login/akses dipindahkan dari Log ke sheet Akses.' : '') + (nDok ? '\n' + nDok + ' baris formulir/contoh per skema ditambahkan di sheet Dokumen.' : '');
   if (!rows_('Pengguna').length) {
     const pw = Utilities.getUuid().replace(/-/g, '').slice(0, 10);
     const salt = Utilities.getUuid();
@@ -800,6 +807,151 @@ function pemanas() {
     if (lama) cache.put('publicData', lama, 600); // pertahankan data lama bila Google sedang gangguan
     console.warn('pemanas: ' + e.message);       // tidak dilempar agar tidak mengirim email kegagalan pemicu
   }
+}
+
+/* ======================= REKAMAN: PROTEKSI, PEMISAHAN, ARSIP ======================= */
+
+/** Pola aksi yang termasuk catatan akses (bukan rekaman pelayanan). */
+const POLA_AKSES = /^(Login admin|Logout admin|Membuka berkas|Ubah pengguna|Tambah pengguna|Ganti password)/;
+
+/**
+ * Lindungi sheet Log & Akses di spreadsheet: hanya pemilik (akun LSP) yang dapat mengubah.
+ * Skrip berjalan sebagai akun LSP, jadi pencatatan otomatis tetap berjalan.
+ */
+function lindungiLog_(ss) {
+  ['Log', 'Akses'].forEach(name => {
+    const sh = ss.getSheetByName(name);
+    if (!sh) return;
+    let p = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET)[0];
+    if (!p) p = sh.protect();
+    p.setDescription('Rekaman SIPINTAR — hanya dapat diubah oleh sistem (akun LSP).');
+    const me = Session.getEffectiveUser();
+    p.addEditor(me);
+    p.removeEditors(p.getEditors().filter(e => e.getEmail() !== me.getEmail()));
+    if (p.canDomainEdit()) { try { p.setDomainEdit(false); } catch (e) { /* bukan akun domain */ } }
+  });
+}
+
+/** Pindahkan catatan akses lama dari Log ke sheet Akses (sekali, aman diulang). */
+function pisahkanAkses_() {
+  return withLock_(() => {
+    const log = sh_('Log'), akses = sh_('Akses');
+    const last = log.getLastRow();
+    if (last < 2) return 0;
+    const cols = SHEETS.Log.length;
+    const v = coba_(() => log.getRange(2, 1, last - 1, cols).getValues());
+    const iAksi = SHEETS.Log.indexOf('aksi');
+    const pindah = v.filter(r => POLA_AKSES.test(String(r[iAksi])));
+    if (!pindah.length) return 0;
+    const tetap = v.filter(r => !POLA_AKSES.test(String(r[iAksi])));
+    tulisTambah_(akses, pindah);
+    tulisUlang_(log, tetap, last - 1);
+    return pindah.length;
+  });
+}
+
+/** Tambahkan banyak baris sekaligus di bawah data yang ada. */
+function tulisTambah_(sh, rows) {
+  if (!rows.length) return;
+  const r0 = sh.getLastRow() + 1;
+  sh.getRange(r0, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
+}
+
+/** Tulis ulang isi sheet (di bawah judul) dengan baris yang tersisa. */
+function tulisUlang_(sh, rows, jumlahLama) {
+  const cols = sh.getLastColumn();
+  if (jumlahLama > 0) sh.getRange(2, 1, jumlahLama, cols).clearContent();
+  if (rows.length) sh.getRange(2, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
+}
+
+/** Spreadsheet arsip per tahun ("Arsip Rekaman SIPINTAR 2026"), dibuat bila belum ada. */
+function fileArsip_(tahun, buat) {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('arsip_' + tahun);
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) { /* file dihapus: buat baru */ } }
+  if (!buat) return null;
+  const a = SpreadsheetApp.create('Arsip Rekaman SIPINTAR ' + tahun);
+  const first = a.getSheets()[0];
+  ['Log', 'Akses'].forEach((n, i) => {
+    const sh = i === 0 ? first.setName(n) : a.insertSheet(n);
+    sh.getRange(1, 1, 1, SHEETS[n].length).setValues([SHEETS[n]]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  });
+  try { // simpan di folder yang sama dengan spreadsheet utama
+    const induk = DriveApp.getFileById(ss_().getId()).getParents();
+    if (induk.hasNext()) DriveApp.getFileById(a.getId()).moveTo(induk.next());
+  } catch (e) { /* tetap di My Drive */ }
+  lindungiLog_(a);
+  props.setProperty('arsip_' + tahun, a.getId());
+  return a;
+}
+
+/**
+ * ARSIP REKAMAN — jalankan manual dari editor, atau otomatis tiap bulan (pasangArsipOtomatis).
+ * - Akses  : baris lebih tua dari SIMPAN_AKSES_BULAN dipindah ke arsip.
+ * - Log    : baris lebih tua dari SIMPAN_LOG_BULAN dipindah ke arsip, KECUALI milik peserta yang prosesnya
+ *            belum selesai (riwayatnya tetap di Log agar detail peserta lengkap dan cepat).
+ * Arsip disimpan per tahun di file "Arsip Rekaman SIPINTAR <tahun>" (sheet dilindungi, tidak dihapus).
+ */
+function arsipkanLog() {
+  const hasil = [];
+  const batas = (bulan) => { const d = new Date(); d.setMonth(d.getMonth() - bulan); return Utilities.formatDate(d, CONFIG.TZ, 'yyyy-MM-dd HH:mm:ss'); };
+  const aktif = {};
+  rows_('Pendaftaran').forEach(r => { if (!selesai_(r)) aktif[r.no_reg] = true; });
+  [['Akses', CONFIG.SIMPAN_AKSES_BULAN, () => true], ['Log', CONFIG.SIMPAN_LOG_BULAN, r => !aktif[r[SHEETS.Log.indexOf('ref')]]]].forEach(([nama, bulan, bolehArsip]) => {
+    const n = withLock_(() => {
+      const sh = sh_(nama), last = sh.getLastRow();
+      if (last < 2) return 0;
+      const cols = SHEETS[nama].length, b = batas(bulan);
+      const v = coba_(() => sh.getRange(2, 1, last - 1, cols).getValues());
+      const tua = r => /^\d{4}-/.test(String(val_(r[0]))) && String(val_(r[0])) < b && bolehArsip(r);
+      const arsip = v.filter(tua);
+      if (!arsip.length) return 0;
+      const perTahun = {};
+      arsip.forEach(r => { const t = String(val_(r[0])).slice(0, 4); (perTahun[t] = perTahun[t] || []).push(r); });
+      Object.keys(perTahun).forEach(t => tulisTambah_(fileArsip_(t, true).getSheetByName(nama), perTahun[t]));
+      const sisa = v.filter(r => !tua(r) && r.join('') !== '');
+      tulisUlang_(sh, sisa, last - 1);
+      return arsip.length;
+    });
+    hasil.push(nama + ': ' + n + ' baris diarsipkan');
+  });
+  log_({ username: 'sistem', nama: 'Sistem (arsip otomatis)', peran: 'Sistem' }, 10, 'Arsip rekaman berkala', '', hasil.join('; '));
+  const pesan = 'Arsip selesai.\n' + hasil.join('\n');
+  Logger.log(pesan);
+  try { SpreadsheetApp.getUi().alert(pesan); } catch (e) { /* dari pemicu */ }
+  return pesan;
+}
+
+/** Peserta dianggap selesai bila sertifikat diserahkan, belum kompeten, atau tidak memenuhi syarat. */
+function selesai_(r) {
+  return r.status_sertifikat === 'Sudah Diserahkan' || r.rekomendasi === 'Belum Kompeten' || r.status_verifikasi === 'Tidak Memenuhi Syarat';
+}
+
+/** Jalankan SEKALI: arsip otomatis setiap tanggal 1 pukul 02.00. */
+function pasangArsipOtomatis() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'arsipkanLog').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('arsipkanLog').timeBased().onMonthDay(1).atHour(2).create();
+  Logger.log('Arsip otomatis aktif: setiap tanggal 1 pukul 02.00.');
+}
+
+/** Riwayat pelayanan satu peserta; bila riwayat awal sudah diarsipkan, dilengkapi dari file arsip. */
+function riwayat_(r) {
+  let logs = rows_('Log').filter(l => l.ref === r.no_reg);
+  if (!logs.some(l => /Permohonan sertifikasi diterima/.test(l.aksi))) {
+    const t0 = Number(String(r.waktu_daftar).slice(0, 4)) || new Date().getFullYear();
+    const lama = [];
+    for (let t = t0; t <= new Date().getFullYear(); t++) {
+      const a = fileArsip_(t, false);
+      if (!a) continue;
+      const sh = a.getSheetByName('Log');
+      if (!sh || sh.getLastRow() < 2) continue;
+      const h = SHEETS.Log, v = sh.getRange(2, 1, sh.getLastRow() - 1, h.length).getValues();
+      v.forEach(x => { if (String(x[h.indexOf('ref')]) === r.no_reg) { const o = {}; h.forEach((k, i) => o[k] = val_(x[i])); lama.push(o); } });
+    }
+    logs = lama.concat(logs);
+  }
+  return logs;
 }
 
 function pasangPemanas() {
@@ -1133,6 +1285,13 @@ function catatGagalLacak_(kunci) {
   c.put('lk_' + kunci, String(Number(c.get('lk_' + kunci) || 0) + 1), 600);
 }
 
+/** Catatan akses/teknis (login, logout, buka berkas, kelola akun) — dipisah dari rekaman pelayanan. */
+function akses_(user, aksi, ref, detail) {
+  try {
+    append_('Akses', { waktu: now_(), aktor: user.nama || user.username, peran: user.peran, langkah_sop: '10', aksi: aksi, ref: ref, detail: detail || '' });
+  } catch (e) { /* tidak boleh menggagalkan transaksi */ }
+}
+
 function log_(user, langkah, aksi, ref, detail) {
   try {
     append_('Log', { waktu: now_(), aktor: user.nama || user.username, peran: user.peran, langkah_sop: String(langkah), aksi: aksi, ref: ref, detail: detail || '' });
@@ -1177,7 +1336,7 @@ function publicView_(r) {
   const mapA = index_(rows_('Asesor'), 'id_asesor');
   const mapJ = index_(rows_('Jadwal'), 'id_jadwal');
   const j = mapJ[r.id_jadwal] || {};
-  const logs = rows_('Log').filter(l => l.ref === r.no_reg).map(l => ({ waktu: l.waktu, langkah_sop: l.langkah_sop, aksi: l.aksi }));
+  const logs = riwayat_(r).map(l => ({ waktu: l.waktu, langkah_sop: l.langkah_sop, aksi: l.aksi }));
   return {
     no_reg: r.no_reg, nama: r.nama, nik: String(r.nik).slice(0, 4) + '********' + String(r.nik).slice(-4),
     email: r.email, waktu_daftar: r.waktu_daftar,

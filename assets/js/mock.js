@@ -1,7 +1,7 @@
 /* MODE DEMO — tiruan backend di browser. Aktif hanya jika API_URL di config.js kosong.
    Data contoh disimpan di localStorage browser ini saja. Akun demo: admin / demo12345 */
 (function () {
-  const KEY = 'sipintar_demo_db_v5';
+  const KEY = 'sipintar_demo_db_v6';
   const SEED = window.SIPINTAR_SEED || { skema: [], tuk: [] };
   const pad = (n, w) => String(n).padStart(w, '0');
   const now = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2) + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2); };
@@ -34,7 +34,7 @@
         id_tuk: k.tuk, kuota: '0', batas_daftar: '2026-10-14', status: 'Dibuka', keterangan: 'Uji kompetensi perdana (penyaksian BNSP)'
       })),
       Pendaftaran: [],
-      Keluhan: [], Layanan: [], Survei: [], Log: [],
+      Keluhan: [], Layanan: [], Survei: [], Log: [], Akses: [],
       Dokumen: [
         { id_dok: 'DOK-001', nomor: 'XVII/SOP-PKS', judul: 'SOP Pelayanan Kegiatan Sertifikasi', kategori: 'SOP', id_skema: '', link: '', status: 'Aktif' },
         { id_dok: 'DOK-002', nomor: 'PBNSP 201', judul: 'Persyaratan Umum Lembaga Sertifikasi Profesi', kategori: 'Acuan', id_skema: '', link: '', status: 'Aktif' },
@@ -214,7 +214,7 @@
       const s = { username: u.username, nama: u.nama, peran: u.peran };
       sessions[token] = s;
       try { localStorage.setItem('sipintar_demo_sess_' + token, JSON.stringify(s)); } catch (e) { /* abaikan */ }
-      log(s, 10, 'Login admin', u.username, '');
+      db.Akses.push({ waktu: now(), aktor: s.nama, peran: s.peran, langkah_sop: '10', aksi: 'Login admin', ref: u.username, detail: '' });
       return { token, user: s };
     }
   };
@@ -260,6 +260,7 @@
     listSheet: (d) => {
       if (d.sheet === 'Pengaturan') return Object.keys(db.Pengaturan).map(k => ({ kunci: k, nilai: db.Pengaturan[k], keterangan: '' }));
       if (d.sheet === 'Log') return db.Log.slice(-1000).reverse();
+      if (d.sheet === 'Akses') return (db.Akses || []).slice(-1000).reverse();
       return (db[d.sheet] || fail('Sheet tidak diizinkan.')).slice();
     },
     saveRow: (d, u) => {
