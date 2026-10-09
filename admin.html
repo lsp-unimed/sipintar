@@ -8,6 +8,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png">
   <link rel="apple-touch-icon" href="assets/img/favicon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#b0122a">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,5 +24,10 @@
   <script src="assets/js/mock.js?v=20261009a"></script>
   <script src="assets/js/core.js?v=20261009a"></script>
   <script src="assets/js/admin.js?v=20261009a"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+    }
+  </script>
 </body>
 </html>
