@@ -3,7 +3,7 @@
   "short_name": "SIPINTAR",
   "description": "Sistem Informasi Pemantauan dan Layanan Terintegrasi LSP Universitas Negeri Medan",
   "lang": "id",
-  "start_url": "./index.html",
+  "start_url": "./admin.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
