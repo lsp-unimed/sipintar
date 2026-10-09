@@ -78,8 +78,8 @@ const PUBLIC_SETTINGS = ['nama_lsp', 'nama_singkat', 'tagline', 'deskripsi', 'no
 /* ================================ ROUTER ================================ */
 
 function doGet(e) {
-  const p = (e && e.parameter) || {};
-  return out_(route_(p.action || 'ping', p, p.token));
+  // GET hanya untuk cek koneksi; semua aksi lain wajib POST agar password/token tidak masuk URL.
+  return out_(route_('ping', {}, ''));
 }
 
 function doPost(e) {
@@ -94,8 +94,9 @@ function out_(obj) {
 
 function route_(action, data, token) {
   try {
-    if (PUBLIC[action]) return { ok: true, data: PUBLIC[action](data) };
-    const a = ADMIN[action];
+    const punya = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+    if (punya(PUBLIC, action)) return { ok: true, data: PUBLIC[action](data || {}) };
+    const a = punya(ADMIN, action) ? ADMIN[action] : null;
     if (a) {
       const user = auth_(token);
       if (a.roles && user.peran !== 'Admin' && a.roles.indexOf(user.peran) < 0) {
@@ -173,6 +174,10 @@ const PUBLIC = {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(d.email).trim())) throw new Error('Format email tidak valid.');
     if (!d.setuju) throw new Error('Anda harus menyetujui pernyataan pendaftaran.');
     if (!d.setuju_persyaratan) throw new Error('Centang pernyataan bahwa Anda memenuhi persyaratan skema.');
+    if (d.website) throw new Error('Permintaan ditolak.'); // jebakan bot (kolom tersembunyi)
+    batas_('daftar_semua', 300, 3600, 'Pendaftaran sedang sangat ramai. Silakan coba lagi beberapa menit lagi.');
+    batas_('daftar_em_' + String(d.email).trim().toLowerCase(), 6, 86400, 'Terlalu banyak percobaan pendaftaran dengan email ini hari ini. Hubungi Sekretariat LSP bila perlu bantuan.');
+    batas_('daftar_nik_' + String(d.nik).trim(), 6, 86400, 'Terlalu banyak percobaan pendaftaran dengan NIK ini hari ini. Hubungi Sekretariat LSP bila perlu bantuan.');
 
     const files = d.files || {};
     if (!files.file_apl01) throw new Error('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
@@ -188,7 +193,7 @@ const PUBLIC = {
       const isi = daftar.filter(r => r.id_jadwal === d.id_jadwal && r.status_verifikasi !== 'Tidak Memenuhi Syarat').length;
       if (!jadwalBuka_(jadwal, isi)) throw new Error('Pendaftaran untuk jadwal ini sudah ditutup atau kuota penuh.');
       const dobel = daftar.find(r => r.id_jadwal === d.id_jadwal && String(r.nik) === nik && r.status_verifikasi !== 'Tidak Memenuhi Syarat');
-      if (dobel) throw new Error('NIK ini sudah terdaftar pada jadwal yang sama (No. Registrasi ' + dobel.no_reg + ').');
+      if (dobel) throw new Error('NIK ini sudah terdaftar pada jadwal yang sama. Nomor registrasi telah dikirim ke email yang didaftarkan; gunakan menu Status permohonan.');
       return jadwal;
     };
     cekJadwal();
@@ -256,12 +261,14 @@ const PUBLIC = {
     const r = cariPeserta_(d.no_reg, d.email);
     if (r.status_kelengkapan !== 'Belum Lengkap' && r.status_verifikasi !== 'Perlu Perbaikan') throw new Error('Unggah ulang hanya bisa dilakukan bila berkas dinyatakan belum lengkap atau perlu perbaikan.');
     const files = d.files || {};
+    if (!Object.keys(files).some(k => /^file_/.test(k) && files[k])) throw new Error('Pilih minimal satu berkas untuk diunggah ulang.');
+    batas_('ulang_' + r.no_reg, 10, 86400, 'Batas unggah ulang hari ini tercapai. Hubungi Sekretariat LSP.');
+    // unggah ke Drive di luar kunci agar pengguna lain tidak ikut menunggu
+    const patch = {};
+    ['file_apl01', 'file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'].forEach(k => {
+      if (files[k]) patch[k] = saveFile_(files[k], r.no_reg, k.replace('file_', '') + '_ulang_' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMMddHHmm'));
+    });
     return withLock_(() => {
-      const patch = {};
-      ['file_apl01', 'file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'].forEach(k => {
-        if (files[k]) patch[k] = saveFile_(files[k], r.no_reg, k.replace('file_', '') + '_ulang_' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMMddHHmm'));
-      });
-      if (!Object.keys(patch).length) throw new Error('Pilih minimal satu berkas untuk diunggah ulang.');
       Object.assign(patch, { status_kelengkapan: 'Menunggu Pemeriksaan', status_verifikasi: 'Menunggu Verifikasi', diperbarui: now_() });
       update_('Pendaftaran', r.no_reg, patch);
       log_({ username: 'publik', nama: r.nama, peran: 'Pemohon' }, 2, 'Unggah ulang berkas persyaratan', r.no_reg,
@@ -292,6 +299,9 @@ const PUBLIC = {
   /** Langkah 9 — Penanganan Keluhan Pelayanan. */
   keluhan: (d) => {
     ['nama', 'email', 'kategori', 'isi'].forEach(k => { if (!String(d[k] || '').trim()) throw new Error('Kolom "' + k + '" wajib diisi.'); });
+    if (String(d.isi).length > 5000) throw new Error('Uraian keluhan terlalu panjang (maks. 5.000 karakter).');
+    batas_('keluhan_semua', 100, 3600);
+    batas_('keluhan_' + String(d.email).trim().toLowerCase(), 5, 3600);
     return withLock_(() => {
       const no = nextId_('KLH', 'KLH-' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMM') + '-', 3);
       append_('Keluhan', {
@@ -312,9 +322,12 @@ const PUBLIC = {
       cariPeserta_(d.no_reg, d.email); // banding hanya untuk peserta terdaftar
       if (!String(d.keterangan || '').trim()) throw new Error('Alasan banding wajib diisi.');
     }
+    if (String(d.keterangan || '').length > 5000) throw new Error('Keterangan terlalu panjang (maks. 5.000 karakter).');
+    batas_('layanan_semua', 100, 3600);
+    batas_('layanan_' + String(d.email).trim().toLowerCase(), 5, 3600);
+    const no = withLock_(() => nextId_(prefix, prefix + '-' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMM') + '-', 3));
+    const file = d.file ? saveFile_(d.file, no, 'lampiran') : ''; // di luar kunci
     return withLock_(() => {
-      const no = nextId_(prefix, prefix + '-' + Utilities.formatDate(new Date(), CONFIG.TZ, 'yyMM') + '-', 3);
-      const file = d.file ? saveFile_(d.file, no, 'lampiran') : '';
       append_('Layanan', {
         no_layanan: no, waktu: now_(), jenis: d.jenis, nama: d.nama, email: String(d.email).toLowerCase().trim(),
         hp: d.hp, no_reg: d.no_reg || '', no_sertifikat: d.no_sertifikat || '', skema: d.skema || '',
@@ -329,24 +342,28 @@ const PUBLIC = {
   cekTiket: (d) => {
     const no = String(d.no || '').trim().toUpperCase();
     const email = String(d.email || '').trim().toLowerCase();
+    cobaLacak_('tiket_' + no);
+    const gagal = () => { catatGagalLacak_('tiket_' + no); throw new Error('Tiket tidak ditemukan. Periksa kembali nomor tiket dan email.'); };
     let r = rows_('Keluhan').find(x => x.no_tiket === no);
     if (r) {
-      if (r.email !== email) throw new Error('Email tidak sesuai dengan tiket.');
+      if (r.email !== email) gagal();
       return { no: r.no_tiket, jenis: 'Keluhan: ' + r.kategori, waktu: r.waktu, status: r.status, tanggapan: r.tindak_lanjut, selesai: r.tgl_selesai, isi: r.isi };
     }
     r = rows_('Layanan').find(x => x.no_layanan === no);
     if (r) {
-      if (r.email !== email) throw new Error('Email tidak sesuai dengan tiket.');
+      if (r.email !== email) gagal();
       return { no: r.no_layanan, jenis: r.jenis, waktu: r.waktu, status: r.status, tanggapan: r.catatan_petugas, selesai: r.tgl_selesai, isi: r.keterangan };
     }
-    throw new Error('Nomor tiket tidak ditemukan.');
+    return gagal();
   },
 
   /** Survei kepuasan pemohon (tujuan SOP: meningkatkan kepuasan). */
   survei: (d) => {
     const s = ['skor_informasi', 'skor_administrasi', 'skor_asesmen', 'skor_petugas', 'skor_keseluruhan'];
     s.forEach(k => { const v = Number(d[k]); if (!(v >= 1 && v <= 5)) throw new Error('Semua penilaian wajib diisi (1–5).'); });
-    const row = { waktu: now_(), no_reg: d.no_reg || '', saran: d.saran || '' };
+    batas_('survei_semua', 300, 3600);
+    if (d.no_reg) batas_('survei_' + String(d.no_reg).trim().toUpperCase(), 1, 21600000, 'Survei untuk nomor registrasi ini sudah diisi. Terima kasih.');
+    const row = { waktu: now_(), no_reg: d.no_reg || '', saran: String(d.saran || '').slice(0, 2000) };
     s.forEach(k => row[k] = Number(d[k]));
     append_('Survei', row);
     return { terima_kasih: true };
@@ -357,19 +374,24 @@ const PUBLIC = {
     const u = String(d.username || '').trim().toLowerCase();
     const cache = CacheService.getScriptCache();
     const failKey = 'fail_' + u;
-    const fails = Number(cache.get(failKey) || 0);
-    if (fails >= 5) throw new Error('Terlalu banyak percobaan gagal. Coba lagi 10 menit lagi.');
-    const user = rows_('Pengguna').find(r => String(r.username).toLowerCase() === u);
-    if (!user || String(user.aktif).toUpperCase() === 'TIDAK' || hash_(d.password || '', user.salt) !== user.password_hash) {
-      cache.put(failKey, String(fails + 1), 600);
-      throw new Error('Username atau password salah.');
-    }
-    cache.remove(failKey);
-    const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
-    const sess = { username: user.username, nama: user.nama, peran: user.peran };
-    cache.put('sess_' + token, JSON.stringify(sess), CONFIG.SESSION_SECONDS);
-    log_(sess, 10, 'Login admin', user.username, '');
-    return { token: token, user: sess };
+    // seluruh proses di dalam kunci agar penghitung gagal tidak bisa diakali dengan permintaan paralel
+    return withLock_(() => {
+      const fails = Number(cache.get(failKey) || 0);
+      if (fails >= 5) throw new Error('Terlalu banyak percobaan gagal. Coba lagi 10 menit lagi.');
+      const user = rows_('Pengguna').find(r => String(r.username).toLowerCase() === u);
+      // hash tetap dihitung walau username tidak ada, agar waktu respons tidak membocorkan username
+      const cocok = hash_(d.password || '', user ? user.salt : 'sipintar-dummy-salt') === (user ? user.password_hash : 'x');
+      if (!user || !cocok || String(user.aktif).toUpperCase() === 'TIDAK') {
+        cache.put(failKey, String(fails + 1), 600);
+        throw new Error('Username atau password salah.');
+      }
+      cache.remove(failKey);
+      const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
+      const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now() };
+      cache.put('sess_' + token, JSON.stringify(sess), CONFIG.SESSION_SECONDS);
+      log_(sess, 10, 'Login admin', user.username, '');
+      return { token: token, user: { username: sess.username, nama: sess.nama, peran: sess.peran } };
+    });
   }
 };
 
@@ -435,6 +457,7 @@ const ADMIN = {
    * d = { sheet: 'Pendaftaran'|'Layanan', id: no_reg|no_layanan, kolom: 'file_ktp'|... }
    */
   lihatBerkas: {
+    roles: ['Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi'],
     fn: (d, u) => {
       const sumber = d.sheet === 'Layanan' ? 'Layanan' : 'Pendaftaran';
       const kunci = sumber === 'Layanan' ? 'no_layanan' : 'no_reg';
@@ -446,6 +469,7 @@ const ADMIN = {
       const m = String(r[kolom]).match(/[-\w]{25,}/);
       if (!m) throw new Error('Tautan berkas tidak valid.');
       const file = coba_(() => DriveApp.getFileById(m[0]));
+      if (!diFolderUnggahan_(file)) throw new Error('Berkas berada di luar folder unggahan SIPINTAR.');
       const blob = file.getBlob();
       const bytes = blob.getBytes();
       if (bytes.length > 15 * 1024 * 1024) throw new Error('Berkas terlalu besar untuk ditampilkan.');
@@ -506,9 +530,12 @@ const ADMIN = {
     roles: ['Sekretariat LSP'],
     fn: (d, u) => {
       if (MASTER_SHEETS.indexOf(d.sheet) < 0) throw new Error('Sheet tidak diizinkan.');
+      if (d.sheet === 'Pengaturan' && u.peran !== 'Admin') throw new Error('Pengaturan hanya dapat diubah oleh Admin.');
       const key = KEY[d.sheet];
       const row = {};
-      SHEETS[d.sheet].forEach(h => { if (d.row[h] !== undefined) row[h] = String(d.row[h]); });
+      SHEETS[d.sheet].forEach(h => { if (d.row && d.row[h] !== undefined) row[h] = String(d.row[h]); });
+      ['link', 'link_dokumen'].forEach(h => { if (row[h]) cekLink_(row[h]); });
+      if (d.sheet === 'Pengaturan' && /^link_/.test(String(row.kunci)) && row.nilai) cekLink_(row.nilai);
       return withLock_(() => {
         let id = row[key];
         const ada = id && rows_(d.sheet).some(r => String(r[key]) === String(id));
@@ -577,8 +604,10 @@ const ADMIN = {
           patch.salt = Utilities.getUuid();
           patch.password_hash = hash_(d.password, patch.salt);
         }
-        if (ada) update_('Pengguna', un, patch);
-        else {
+        if (ada) {
+          update_('Pengguna', un, patch);
+          if (d.password || ada.peran !== patch.peran || patch.aktif === 'TIDAK') cabutSesi_(un);
+        } else {
           if (!d.password) throw new Error('Password wajib untuk pengguna baru.');
           append_('Pengguna', Object.assign({ username: un }, patch));
         }
@@ -595,6 +624,9 @@ const ADMIN = {
       if (String(d.baru || '').length < 8) throw new Error('Password baru minimal 8 karakter.');
       const salt = Utilities.getUuid();
       update_('Pengguna', u.username, { salt: salt, password_hash: hash_(d.baru, salt) });
+      cabutSesi_(u.username); // sesi lain (perangkat lain / token bocor) ikut berakhir
+      const c = CacheService.getScriptCache(); // sesi saat ini tetap aktif
+      c.put('sess_' + u._token, JSON.stringify({ username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000 }), CONFIG.SESSION_SECONDS);
       log_(u, 10, 'Ganti password', u.username, '');
       return true;
     }
@@ -666,7 +698,10 @@ const TAHAP = {
   hasil: {
     langkah: 7, roles: ['Bagian Sertifikasi'],
     fields: ['rekomendasi', 'link_surat_hasil', 'catatan_hasil'],
-    validate: v => { if (['Kompeten', 'Belum Kompeten'].indexOf(v.rekomendasi) < 0) throw new Error('Pilih Kompeten / Belum Kompeten.'); },
+    validate: v => {
+      if (['Kompeten', 'Belum Kompeten'].indexOf(v.rekomendasi) < 0) throw new Error('Pilih Kompeten / Belum Kompeten.');
+      if (v.link_surat_hasil) cekLink_(v.link_surat_hasil);
+    },
     auto: v => ({ tgl_hasil: now_(), status_asesmen: 'Selesai', status_sertifikat: v.rekomendasi === 'Kompeten' ? 'Diajukan ke BNSP' : 'Belum Terbit' }),
     email: r => ({
       subjek: 'Pemberitahuan hasil sertifikasi',
@@ -1021,9 +1056,42 @@ function hash_(pw, salt) {
 
 function auth_(token) {
   if (!token) throw new Error('Sesi berakhir. Silakan login kembali.');
-  const s = CacheService.getScriptCache().get('sess_' + token);
+  const cache = CacheService.getScriptCache();
+  const s = cache.get('sess_' + token);
   if (!s) throw new Error('Sesi berakhir. Silakan login kembali.');
-  return JSON.parse(s);
+  const sess = JSON.parse(s);
+  // periksa ulang akun setiap permintaan: akun nonaktif / peran berubah / password diganti langsung berlaku
+  const u = rows_('Pengguna').find(r => String(r.username).toLowerCase() === String(sess.username).toLowerCase());
+  const ver = Number(PropertiesService.getScriptProperties().getProperty('uver_' + String(sess.username).toLowerCase()) || 0);
+  if (!u || String(u.aktif).toUpperCase() === 'TIDAK' || ver > Number(sess.t || 0)) {
+    cache.remove('sess_' + token);
+    throw new Error('Sesi berakhir. Silakan login kembali.');
+  }
+  sess.peran = u.peran; sess.nama = u.nama;
+  return sess;
+}
+
+/** Tandai semua sesi milik pengguna ini tidak berlaku (setelah ganti password / peran / nonaktif). */
+function cabutSesi_(username) {
+  PropertiesService.getScriptProperties().setProperty('uver_' + String(username).toLowerCase(), String(Date.now()));
+}
+
+/** Pembatas frekuensi sederhana: maksimal `maks` kejadian per `detik` untuk satu kunci. */
+function batas_(kunci, maks, detik, pesan) {
+  const c = CacheService.getScriptCache();
+  const k = 'rl_' + String(kunci).slice(0, 200);
+  const n = Number(c.get(k) || 0);
+  if (n >= maks) throw new Error(pesan || 'Terlalu banyak permintaan. Silakan coba lagi nanti.');
+  c.put(k, String(n + 1), Math.min(detik, 21600)); // batas CacheService 6 jam
+}
+
+/** Batasi tebakan email pada pelacakan (10 kali gagal / 10 menit per nomor). */
+function cobaLacak_(kunci) {
+  if (Number(CacheService.getScriptCache().get('lk_' + kunci) || 0) >= 10) throw new Error('Terlalu banyak percobaan. Coba lagi 10 menit lagi.');
+}
+function catatGagalLacak_(kunci) {
+  const c = CacheService.getScriptCache();
+  c.put('lk_' + kunci, String(Number(c.get('lk_' + kunci) || 0) + 1), 600);
 }
 
 function log_(user, langkah, aksi, ref, detail) {
@@ -1054,8 +1122,12 @@ function cariPeserta_(noReg, email) {
   const no = String(noReg || '').trim().toUpperCase();
   const em = String(email || '').trim().toLowerCase();
   if (!no || !em) throw new Error('Isi No. Registrasi dan email yang didaftarkan.');
+  cobaLacak_('reg_' + no);
   const r = rows_('Pendaftaran').find(x => String(x.no_reg).toUpperCase() === no);
-  if (!r || String(r.email).toLowerCase() !== em) throw new Error('Data tidak ditemukan. Periksa kembali No. Registrasi dan email.');
+  if (!r || String(r.email).toLowerCase() !== em) {
+    catatGagalLacak_('reg_' + no);
+    throw new Error('Data tidak ditemukan. Periksa kembali No. Registrasi dan email.');
+  }
   return r;
 }
 
@@ -1104,7 +1176,31 @@ function saveFileTo_(f, folder, prefix, label) {
   if (!ok[f.type]) throw new Error('Berkas ' + label + ' harus PDF, JPG, atau PNG.');
   const bytes = Utilities.base64Decode(String(f.data).replace(/^data:[^,]+,/, ''));
   if (bytes.length > CONFIG.MAX_FILE_MB * 1024 * 1024) throw new Error('Berkas ' + label + ' melebihi ' + CONFIG.MAX_FILE_MB + ' MB.');
+  // cocokkan isi berkas dengan jenisnya (tidak hanya percaya label dari browser)
+  const b = i => (bytes[i] || 0) & 0xff;
+  const asli = (f.type === 'application/pdf' && b(0) === 0x25 && b(1) === 0x50 && b(2) === 0x44 && b(3) === 0x46) ||
+    (f.type === 'image/jpeg' && b(0) === 0xff && b(1) === 0xd8 && b(2) === 0xff) ||
+    (f.type === 'image/png' && b(0) === 0x89 && b(1) === 0x50 && b(2) === 0x4e && b(3) === 0x47);
+  if (!asli) throw new Error('Isi berkas ' + label + ' tidak sesuai format PDF/JPG/PNG. Simpan ulang berkas lalu unggah kembali.');
   return folder.createFile(Utilities.newBlob(bytes, f.type, prefix + '_' + label + '.' + ok[f.type]));
+}
+
+/** Tautan harus https:// (mencegah tautan javascript: dan sejenisnya). */
+function cekLink_(v) {
+  if (!/^https:\/\/[^\s"'<>]+$/i.test(String(v).trim())) throw new Error('Tautan harus diawali https:// (salin dari tombol Bagikan Google Drive).');
+}
+
+/** Pastikan berkas berada di folder unggahan SIPINTAR (atau subfoldernya). */
+function diFolderUnggahan_(file) {
+  const rootId = uploadRoot_().getId();
+  const ps = file.getParents();
+  while (ps.hasNext()) {
+    const p = ps.next();
+    if (p.getId() === rootId) return true;
+    const pp = p.getParents();
+    while (pp.hasNext()) if (pp.next().getId() === rootId) return true;
+  }
+  return false;
 }
 
 function uploadRoot_() {

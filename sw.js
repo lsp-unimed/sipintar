@@ -3,19 +3,19 @@
  * Catatan: permintaan ke Apps Script (script.google.com) TIDAK di-cache,
  * selalu lewat jaringan supaya data sertifikasi tetap segar.
  */
-const CACHE = 'sipintar-v1';
+const CACHE = 'sipintar-v2';
 const CORE = [
   './',
   './index.html',
   './admin.html',
   './manifest.webmanifest',
-  './assets/css/style.css?v=20261009a',
-  './assets/js/config.js?v=20261009a',
-  './assets/js/seed-data.js?v=20261009a',
-  './assets/js/mock.js?v=20261009a',
-  './assets/js/core.js?v=20261009a',
-  './assets/js/public.js?v=20261009a',
-  './assets/js/admin.js?v=20261009a',
+  './assets/css/style.css?v=20261010a',
+  './assets/js/config.js?v=20261010a',
+  './assets/js/seed-data.js?v=20261010a',
+  './assets/js/mock.js?v=20261010a',
+  './assets/js/core.js?v=20261010a',
+  './assets/js/public.js?v=20261010a',
+  './assets/js/admin.js?v=20261010a',
   './assets/img/favicon-192.png',
   './assets/img/favicon-512.png',
   './assets/img/logo-lsp.png'
@@ -36,6 +36,8 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Hanya permintaan GET yang ditangani; POST ke Apps Script (login, pendaftaran, data) selalu langsung ke jaringan.
+  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   // API Apps Script + Google Fonts: selalu jaringan dulu, fallback cache.
   if (url.hostname.includes('script.google') || url.hostname.includes('fonts.g')) {

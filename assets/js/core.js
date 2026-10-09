@@ -127,8 +127,12 @@
     try { navigator.clipboard.writeText(text); toast('Disalin: ' + text, 'ok'); } catch (e) { toast('Salin manual: ' + text); }
   }
 
+  /** Tautan eksternal hanya boleh https:// (cegah javascript: dsb.). */
+  const safeUrl = (u) => /^https:\/\/[^\s"'<>]+$/i.test(String(u || '').trim()) ? esc(String(u).trim()) : '#';
+
   function csv(rows, cols, filename) {
-    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    // awali dengan ' bila sel diawali = + - @ agar tidak dieksekusi sebagai rumus di Excel/Sheets
+    const q = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
     const lines = [cols.map(c => q(c.label || c.key)).join(',')].concat(rows.map(r => cols.map(c => q(r[c.key])).join(',')));
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
@@ -243,5 +247,5 @@
     return out;
   }
 
-  window.S = { CFG, DEMO, api, store, esc, $, $$, tgl, rupiah, today, badge, toast, modal, loading, fileToPayload, formData, busy, copy, csv, icon, guilloche, SOP, tahapPeserta };
+  window.S = { CFG, DEMO, api, store, esc, safeUrl, $, $$, tgl, rupiah, today, badge, toast, modal, loading, fileToPayload, formData, busy, copy, csv, icon, guilloche, SOP, tahapPeserta };
 })();

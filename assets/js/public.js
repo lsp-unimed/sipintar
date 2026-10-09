@@ -1,6 +1,6 @@
 /* SIPINTAR LSP UNIMED — halaman layanan publik (asesi / pemohon) */
 (function () {
-  const { api, esc, $, $$, tgl, rupiah, badge, toast, loading, fileToPayload, formData, busy, copy, icon, guilloche, SOP, tahapPeserta, store, DEMO, CFG } = window.S;
+  const { api, esc, safeUrl, $, $$, tgl, rupiah, badge, toast, loading, fileToPayload, formData, busy, copy, icon, guilloche, SOP, tahapPeserta, store, DEMO, CFG } = window.S;
 
   const NAV = [
     { group: 'Informasi', items: [['alur', 'Alur layanan (SOP)', 'flow', '10 langkah pelayanan sertifikasi'], ['skema', 'Skema sertifikasi', 'book', 'Unit, persyaratan, dan biaya'], ['dokumen', 'Dokumen mutu', 'file', 'SOP, acuan, dan formulir']] },
@@ -142,12 +142,12 @@
   }
   function contohApl(D, idSkema) {
     if (!idSkema) return `<b>Contoh pengisian</b> APL-01 dan APL-02 tersedia per skema di menu <a href="#/dokumen">Dokumen mutu</a> (pilih skema Anda).`;
-    const l = (n) => { const h = contohLink(D, n, idSkema); return h ? `<a href="${esc(h)}" target="_blank" rel="noopener">Contoh FR.APL.0${n}</a>` : `Contoh FR.APL.0${n} <span class="muted">(segera tersedia)</span>`; };
+    const l = (n) => { const h = contohLink(D, n, idSkema); return h ? `<a href="${safeUrl(h)}" target="_blank" rel="noopener">Contoh FR.APL.0${n}</a>` : `Contoh FR.APL.0${n} <span class="muted">(segera tersedia)</span>`; };
     return `<b>Contoh pengisian untuk skema ini:</b> ${l(1)} · ${l(2)}`;
   }
   function persiapanBerkas(D, idSkema) {
     const apl01 = linkDok(D, /APL.?01/i, idSkema), apl02 = linkDok(D, /APL.?02/i, idSkema) || D.pengaturan.link_template_apl02;
-    const a = (href, t) => href ? `<a href="${esc(href)}" target="_blank" rel="noopener">${t}</a>` : t;
+    const a = (href, t) => href ? `<a href="${safeUrl(href)}" target="_blank" rel="noopener">${t}</a>` : t;
     const info = D.pengaturan.info_verifikasi_langsung || 'Verifikasi langsung berkas asli dilakukan di Sekretariat LSP UNIMED pada jam layanan.';
     return `<div class="card" style="background:var(--amber-soft);border-color:#f3dcb1">
       <h3 style="margin-top:0">Siapkan berkas sebelum mendaftar</h3>
@@ -348,7 +348,7 @@
             ${s.persyaratan ? `<div style="margin-top:8px;font-weight:600;font-size:.9rem">Persyaratan skema</div><ul>${String(s.persyaratan).split(/\n+/).filter(String).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>
             <div class="act"><a class="btn sm ${jd ? '' : 'ghost'}" href="#/jadwal/${esc(s.id_skema)}">${jd ? jd + ' jadwal dibuka' : 'Lihat jadwal'}</a>
             <a class="btn sm ghost" href="#/dokumen/${esc(s.id_skema)}">${icon('file')} Formulir skema</a>
-            ${s.link_dokumen ? `<a class="btn sm ghost" href="${esc(s.link_dokumen)}" target="_blank" rel="noopener">${icon('download')} Dokumen skema</a>` : ''}</div></div>`;
+            ${s.link_dokumen ? `<a class="btn sm ghost" href="${safeUrl(s.link_dokumen)}" target="_blank" rel="noopener">${icon('download')} Dokumen skema</a>` : ''}</div></div>`;
         }).join('') : '<div class="empty">Tidak ada skema dengan kata kunci tersebut.</div>';
       };
       view.innerHTML = `<div class="toolbar"><input id="skQ" placeholder="Cari nama atau kode skema" aria-label="Cari skema"><span class="muted">${D.skema.length} skema</span></div><div class="skema-list" id="skList"></div>`;
@@ -369,7 +369,7 @@
         const kat = {};
         list.forEach(d => (kat[d.kategori || 'Lainnya'] = kat[d.kategori || 'Lainnya'] || []).push(d));
         $('#dkL').innerHTML = Object.keys(kat).map(k => `<div class="section-title" style="margin-top:18px"><h2>${esc(k)}</h2></div><div class="table-wrap"><table><thead><tr><th style="width:170px">Nomor</th><th>Judul</th><th style="width:30%">Berlaku untuk</th><th style="width:90px"></th></tr></thead><tbody>
-          ${kat[k].map(d => `<tr><td class="mono">${esc(d.nomor)}</td><td>${esc(d.judul)}</td><td>${d.id_skema ? esc(nmS(d.id_skema)) : '<span class="muted">Semua skema</span>'}</td><td>${d.link ? `<a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(d.link)}">Unduh</a>` : '<small class="muted">Segera</small>'}</td></tr>`).join('')}
+          ${kat[k].map(d => `<tr><td class="mono">${esc(d.nomor)}</td><td>${esc(d.judul)}</td><td>${d.id_skema ? esc(nmS(d.id_skema)) : '<span class="muted">Semua skema</span>'}</td><td>${d.link ? `<a class="btn sm ghost" target="_blank" rel="noopener" href="${safeUrl(d.link)}">Unduh</a>` : '<small class="muted">Segera</small>'}</td></tr>`).join('')}
         </tbody></table></div>`).join('') || '<div class="empty">Belum ada dokumen.</div>';
       };
       $('#dkS').onchange = draw; draw();
@@ -429,12 +429,13 @@
           <p class="muted" style="margin:0">Formulir khusus skema ini tersedia di <a href="#/dokumen/${esc(j.id_skema)}" target="_blank">Dokumen mutu</a>.</p>
         </div></fieldset>
         <fieldset><legend>Dokumen persyaratan</legend><div class="form">
-          <div class="row">${file('file_apl01', 'Scan FR.APL.01 (tulisan tangan, ditandatangani)', true, (apl01 ? `Template: <a href="${esc(apl01)}" target="_blank" rel="noopener">FR.APL.01</a> · ` : '') + (contohLink(D, 1, j.id_skema) ? `<a href="${esc(contohLink(D, 1, j.id_skema))}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}${file('file_apl02', 'Scan FR.APL.02 (tulisan tangan)', false, (apl02 ? `Template: <a href="${esc(apl02)}" target="_blank" rel="noopener">FR.APL.02</a> · ` : '') + (contohLink(D, 2, j.id_skema) ? `<a href="${esc(contohLink(D, 2, j.id_skema))}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}</div>
+          <div class="row">${file('file_apl01', 'Scan FR.APL.01 (tulisan tangan, ditandatangani)', true, (apl01 ? `Template: <a href="${safeUrl(apl01)}" target="_blank" rel="noopener">FR.APL.01</a> · ` : '') + (contohLink(D, 1, j.id_skema) ? `<a href="${safeUrl(contohLink(D, 1, j.id_skema))}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}${file('file_apl02', 'Scan FR.APL.02 (tulisan tangan)', false, (apl02 ? `Template: <a href="${safeUrl(apl02)}" target="_blank" rel="noopener">FR.APL.02</a> · ` : '') + (contohLink(D, 2, j.id_skema) ? `<a href="${safeUrl(contohLink(D, 2, j.id_skema))}" target="_blank" rel="noopener">Contoh pengisian</a> · ` : '') + `PDF/JPG, maks. ${CFG.MAX_FILE_MB || 2} MB`)}</div>
           <p class="muted" style="margin:0">FR.APL.01 dan FR.APL.02 khusus skema ini dicetak, diisi dengan tulisan tangan (tidak diketik), ditandatangani, lalu dipindai.</p>
           <div class="row">${file('file_ktp', 'Scan KTP', true)}${file('file_foto', 'Pas foto berwarna', true, 'JPG/PNG latar merah/biru, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
           <div class="row">${file('file_ijazah', 'KHS / transkrip nilai', false)}${file('file_pendukung', 'Surat aktif kuliah + bukti magang/PKLI atau sertifikat pelatihan', false, 'Gabungkan dalam satu PDF, maks. ' + (CFG.MAX_FILE_MB || 2) + ' MB')}</div>
           <p class="muted" style="margin:0">Berkas asli wajib dibawa saat verifikasi langsung.</p>
         </div></fieldset>
+        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"><label>Situs web<input name="website" tabindex="-1" autocomplete="off"></label></div>
         <label class="check"><input type="checkbox" name="setuju"> <span>Saya menyatakan data dan dokumen yang saya sampaikan benar. Saya bersedia mengikuti asesmen sesuai ketentuan LSP dan memahami bahwa data saya dijaga kerahasiaannya.</span></label>
         <div><button class="btn gold" type="submit">${icon('send')} Kirim permohonan</button></div>
         <div id="dOut"></div>
@@ -523,7 +524,7 @@
         else box = `<div class="result-big wait">${icon('cal')}<div><div class="big">Belum ada hasil</div>Hasil disampaikan setelah asesmen dan rapat keputusan sertifikasi.</div></div>`;
         return `<div class="card"><h3>${esc(r.nama)} · <span class="mono">${esc(r.no_reg)}</span></h3><p class="muted">${esc(r.skema)}</p>${box}
           ${r.catatan_hasil ? `<p style="margin-top:12px"><b>Catatan:</b> ${esc(r.catatan_hasil)}</p>` : ''}
-          ${r.link_surat_hasil ? `<p style="margin-top:12px"><a class="btn" target="_blank" rel="noopener" href="${esc(r.link_surat_hasil)}">${icon('download')} Unduh surat pemberitahuan hasil</a></p>` : ''}
+          ${r.link_surat_hasil ? `<p style="margin-top:12px"><a class="btn" target="_blank" rel="noopener" href="${safeUrl(r.link_surat_hasil)}">${icon('download')} Unduh surat pemberitahuan hasil</a></p>` : ''}
           ${r.rekomendasi ? `<div class="notice info" style="margin-top:16px"><b>Hak banding &amp; keluhan.</b> Jika Anda tidak sepakat dengan keputusan asesmen, Anda berhak mengajukan <a href="#/banding">banding asesmen</a>. Keluhan atas pelayanan dapat disampaikan melalui <a href="#/keluhan">formulir keluhan</a>.</div>
           <a class="btn gold" href="#/survei">${icon('star')} Isi survei kepuasan</a>` : ''}</div>`;
       });
