@@ -429,6 +429,32 @@ const ADMIN = {
   },
 
   /**
+   * Buka berkas unggahan lewat SIPINTAR (tanpa perlu akses Google Drive pribadi).
+   * Skrip berjalan sebagai akun LSP, jadi berkas tetap privat di Drive; aksesnya dijaga login SIPINTAR
+   * dan setiap pembukaan tercatat di Log (langkah 10).
+   * d = { sheet: 'Pendaftaran'|'Layanan', id: no_reg|no_layanan, kolom: 'file_ktp'|... }
+   */
+  lihatBerkas: {
+    fn: (d, u) => {
+      const sumber = d.sheet === 'Layanan' ? 'Layanan' : 'Pendaftaran';
+      const kunci = sumber === 'Layanan' ? 'no_layanan' : 'no_reg';
+      const boleh = sumber === 'Layanan' ? ['file'] : ['file_apl01', 'file_ktp', 'file_foto', 'file_ijazah', 'file_apl02', 'file_pendukung'];
+      const kolom = String(d.kolom || '');
+      if (boleh.indexOf(kolom) < 0) throw new Error('Jenis berkas tidak dikenal.');
+      const r = rows_(sumber).find(x => String(x[kunci]) === String(d.id));
+      if (!r || !r[kolom]) throw new Error('Berkas tidak ditemukan.');
+      const m = String(r[kolom]).match(/[-\w]{25,}/);
+      if (!m) throw new Error('Tautan berkas tidak valid.');
+      const file = coba_(() => DriveApp.getFileById(m[0]));
+      const blob = file.getBlob();
+      const bytes = blob.getBytes();
+      if (bytes.length > 15 * 1024 * 1024) throw new Error('Berkas terlalu besar untuk ditampilkan.');
+      log_(u, 10, 'Membuka berkas ' + kolom.replace('file_', '').toUpperCase(), d.id, file.getName());
+      return { nama: file.getName(), tipe: blob.getContentType(), data: Utilities.base64Encode(bytes) };
+    }
+  },
+
+  /**
    * Pembaruan tahapan untuk satu atau beberapa peserta.
    * d = { no_regs: [..], tahap: 'verifikasi'|'plotting'|'asesmen'|'hasil'|'sertifikat'|'data', nilai: {...} }
    */

@@ -235,6 +235,10 @@
       };
     },
     listPendaftar: () => db.Pendaftaran.slice().reverse(),
+    lihatBerkas: (d) => {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380"><rect width="600" height="380" fill="#fbecee"/><text x="300" y="180" font-family="Arial" font-size="26" text-anchor="middle">Contoh berkas (mode demo)</text><text x="300" y="220" font-family="Arial" font-size="18" text-anchor="middle">' + String(d.kolom || '') + ' - ' + String(d.id || '') + '</text></svg>';
+      return { nama: (d.id || 'berkas') + '_' + String(d.kolom || '').replace('file_', '') + '.svg', tipe: 'image/svg+xml', data: btoa(svg) };
+    },
     refData: () => ({ Skema: db.Skema, TUK: db.TUK, Asesor: db.Asesor, Jadwal: db.Jadwal }),
     detailPendaftar: (d) => {
       const r = db.Pendaftaran.find(x => x.no_reg === d.no_reg) || fail('Data tidak ditemukan.');

@@ -291,7 +291,7 @@
     const lengkap = kl(r) === 'Lengkap';
     return [
       box(2, 'Pemeriksaan kelengkapan berkas', { tahap: 'kelengkapan', html: `<div><b style="font-size:.88rem">Centang berkas yang sudah sesuai</b>
-        ${BERKAS.map(b => `<label class="check"><input type="checkbox" data-list="cek_berkas" value="${b[0].replace('file_', '')}" ${cekB.indexOf(b[0].replace('file_', '')) >= 0 ? 'checked' : ''} ${r[b[0]] ? '' : 'disabled'}> <span>${esc(b[1])} ${r[b[0]] ? `— <a href="${esc(r[b[0]])}" target="_blank" rel="noopener">buka</a>` : '<span class="muted">(tidak diunggah)</span>'}</span></label>`).join('')}</div>
+        ${BERKAS.map(b => `<label class="check"><input type="checkbox" data-list="cek_berkas" value="${b[0].replace('file_', '')}" ${cekB.indexOf(b[0].replace('file_', '')) >= 0 ? 'checked' : ''} ${r[b[0]] ? '' : 'disabled'}> <span>${esc(b[1])} ${r[b[0]] ? `— <a href="#" data-berkas="${b[0]}" data-id="${esc(r.no_reg)}">buka</a>` : '<span class="muted">(tidak diunggah)</span>'}</span></label>`).join('')}</div>
         <label class="f">Hasil pemeriksaan<select name="status_kelengkapan">${opt(['Menunggu Pemeriksaan', 'Lengkap', 'Belum Lengkap'], kl(r))}</select></label>
         <label class="f">Catatan (wajib bila belum lengkap — tampil ke peserta)<textarea name="catatan_kelengkapan" style="min-height:60px">${esc(r.catatan_kelengkapan)}</textarea></label>
         <small class="muted">Lengkap → peserta diminta datang verifikasi langsung membawa berkas asli. Belum Lengkap → peserta mengunggah ulang dari halaman Status.</small>` }, kl(r) !== 'Lengkap'),
@@ -318,7 +318,7 @@
       const d = await api('detailPendaftar', { no_reg: no });
       current = d;
       const r = d.data;
-      const file = (k, l) => r[k] ? `<a href="${esc(r[k])}" target="_blank" rel="noopener">${esc(l)}</a>` : `<span class="muted">${esc(l)}: —</span>`;
+      const file = (k, l) => r[k] ? `<a href="#" data-berkas="${k}" data-id="${esc(r.no_reg)}">${esc(l)}</a>` : `<span class="muted">${esc(l)}: —</span>`;
       m.body.innerHTML = `
         <div class="print-only"><h2>Rekaman Pelayanan Sertifikasi — ${esc(CFG.NAMA_LSP || 'LSP UNIMED')}</h2><p>SOP ${esc(SOP.nomor)} · dicetak ${tgl(new Date().toISOString().slice(0, 10))} oleh ${esc(USER.nama)}</p></div>
         <div class="grid g2">
@@ -491,7 +491,7 @@
       const r = rows.find(x => x[idk] === tr.dataset.id);
       const m = modal(r[idk], `<dl class="kv"><dt>Jenis</dt><dd>${esc(isK ? 'Keluhan · ' + r.kategori : r.jenis)}</dd><dt>Waktu</dt><dd>${tgl(r.waktu)}</dd><dt>Pemohon</dt><dd>${esc(r.nama)} · ${esc(r.email)} · ${esc(r.hp)}</dd>
         ${r.no_reg ? `<dt>No. Registrasi</dt><dd class="mono">${esc(r.no_reg)}</dd>` : ''}${r.no_sertifikat ? `<dt>No. Sertifikat</dt><dd>${esc(r.no_sertifikat)}</dd>` : ''}${r.skema ? `<dt>Skema</dt><dd>${esc(r.skema)}</dd>` : ''}
-        <dt>Uraian</dt><dd style="font-weight:500;white-space:pre-line">${esc(isK ? r.isi : r.keterangan)}</dd>${r.file ? `<dt>Lampiran</dt><dd><a href="${esc(r.file)}" target="_blank" rel="noopener">Buka berkas</a></dd>` : ''}
+        <dt>Uraian</dt><dd style="font-weight:500;white-space:pre-line">${esc(isK ? r.isi : r.keterangan)}</dd>${r.file && !isK ? `<dt>Lampiran</dt><dd><a href="#" data-berkas="file" data-sheet="Layanan" data-id="${esc(r.no_layanan)}">Buka berkas</a></dd>` : ''}
         ${r.petugas ? `<dt>Admin</dt><dd>${esc(r.petugas)}</dd>` : ''}</dl><hr>
         <form class="form" id="fT"><label class="f">Status<select name="status">${['Diterima', 'Diproses', 'Selesai', 'Ditolak'].map(s => `<option ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
         <label class="f">${isK ? 'Tindak lanjut / tanggapan' : 'Catatan admin'} (tampil ke pemohon)<textarea name="catatan">${esc(isK ? r.tindak_lanjut : r.catatan_petugas)}</textarea></label>
@@ -506,6 +506,31 @@
     };
     draw();
   }
+
+  /* ---------------- Buka berkas unggahan lewat SIPINTAR ---------------- */
+  // Berkas di Drive LSP tetap privat; Apps Script (berjalan sebagai akun LSP) mengirim isinya
+  // ke admin yang sudah login, lalu ditampilkan di tab baru. Tidak perlu login Google akun LSP.
+  document.addEventListener('click', async (e) => {
+    const a = e.target.closest('[data-berkas]');
+    if (!a) return;
+    e.preventDefault();
+    const w = window.open('', '_blank');
+    if (w) w.document.write('<!doctype html><title>Memuat berkas…</title><p style="font-family:sans-serif;padding:24px">Memuat berkas, mohon tunggu…</p>');
+    try {
+      const f = await api('lihatBerkas', { sheet: a.dataset.sheet || 'Pendaftaran', id: a.dataset.id, kolom: a.dataset.berkas });
+      const bin = atob(f.data), u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([u8], { type: f.tipe }));
+      if (!w) { const l = document.createElement('a'); l.href = url; l.download = f.nama; document.body.appendChild(l); l.click(); l.remove(); return; }
+      const isi = /^image\//.test(f.tipe) ? `<img src="${url}" style="max-width:100%;height:auto;display:block;margin:0 auto">`
+        : `<iframe src="${url}" style="border:0;width:100%;height:calc(100vh - 60px)"></iframe>`;
+      w.document.open();
+      w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${esc(f.nama)}</title></head>
+        <body style="margin:0;font-family:Arial,sans-serif;background:#f4f5f7"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#fff;border-bottom:1px solid #ddd">
+        <b style="font-size:14px">${esc(f.nama)}</b><a href="${url}" download="${esc(f.nama)}" style="font-size:14px;color:#b0122a">Unduh</a></div>${isi}</body></html>`);
+      w.document.close();
+    } catch (err) { if (w) w.close(); toast(err.message, 'bad'); }
+  });
 
   /* ---------------- Data master ---------------- */
   const sel = (o) => 'select:' + o;
