@@ -5,9 +5,13 @@
 
   /* ---------------- Penyimpanan aman ---------------- */
   const store = {
-    get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
-    set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* abaikan */ } },
-    del(k) { try { sessionStorage.removeItem(k); } catch (e) { /* abaikan */ } }
+    // Bawaan: sessionStorage (hilang saat tab/aplikasi ditutup).
+    // Kunci yang disimpan dengan "ingat saya" ditaruh di localStorage agar bertahan di perangkat ini.
+    get(k) { try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v, ingat) {
+      try { if (ingat) { localStorage.setItem(k, v); sessionStorage.removeItem(k); } else { sessionStorage.setItem(k, v); localStorage.removeItem(k); } } catch (e) { /* abaikan */ }
+    },
+    del(k) { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (e) { /* abaikan */ } }
   };
 
   /* ---------------- API ---------------- */

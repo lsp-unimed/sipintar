@@ -213,7 +213,7 @@
       const token = 'demo-' + Math.random().toString(36).slice(2);
       const s = { username: u.username, nama: u.nama, peran: u.peran };
       sessions[token] = s;
-      try { sessionStorage.setItem('sipintar_demo_sess_' + token, JSON.stringify(s)); } catch (e) { /* abaikan */ }
+      try { localStorage.setItem('sipintar_demo_sess_' + token, JSON.stringify(s)); } catch (e) { /* abaikan */ }
       log(s, 10, 'Login admin', u.username, '');
       return { token, user: s };
     }
@@ -317,7 +317,7 @@
       if (PUBLIC[action]) { const r = PUBLIC[action](copy(data)); save(); return copy(r); }
       if (ADMIN[action]) {
         let s = sessions[token];
-        if (!s) { try { s = JSON.parse(sessionStorage.getItem('sipintar_demo_sess_' + token)); } catch (e) { s = null; } }
+        if (!s) { try { s = JSON.parse(localStorage.getItem('sipintar_demo_sess_' + token)); } catch (e) { s = null; } }
         if (!s) fail('Sesi berakhir. Silakan login kembali.');
         const r = ADMIN[action](copy(data), s); save(); return copy(r);
       }

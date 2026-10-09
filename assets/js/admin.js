@@ -34,6 +34,7 @@
       ${DEMO ? '<div class="notice">Mode demo: username <b>admin</b>, password <b>demo12345</b>.</div>' : ''}
       <label class="f">Username<input name="username" autocomplete="username" required></label>
       <label class="f">Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <label class="check"><input type="checkbox" name="ingat"> <span>Ingat saya di perangkat ini (7 hari)<br><small class="muted">Centang hanya di HP/komputer pribadi. Jangan dicentang di komputer bersama.</small></span></label>
       <button class="btn block" type="submit">${icon('lock')} Masuk</button>
       <a href="index.html" class="muted" style="font-size:.88rem">Kembali ke layanan publik</a>
       <div id="lOut"></div></form></div></div>`;
@@ -42,9 +43,10 @@
       e.preventDefault();
       busy($('button', f), async () => {
         try {
-          const r = await api('login', formData(f));
-          store.set('sipintar_token', r.token);
-          store.set('sipintar_user', JSON.stringify(r.user));
+          const d = formData(f);
+          const r = await api('login', d);
+          store.set('sipintar_token', r.token, !!d.ingat);
+          store.set('sipintar_user', JSON.stringify(r.user), !!d.ingat);
           USER = r.user;
           await boot();
         } catch (err) { $('#lOut').innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; }

@@ -21,6 +21,7 @@ const CONFIG = {
   UPLOAD_FOLDER_ID: '',    // kosongkan → folder "SIPINTAR_UPLOADS" dibuat otomatis di Drive pemilik
   MAX_FILE_MB: 2,          // batas ukuran per berkas unggahan
   SESSION_SECONDS: 21600,  // 6 jam (batas maksimum CacheService)
+  INGAT_HARI: 7,           // "Ingat saya di perangkat ini": lama sesi (hari)
   TZ: 'Asia/Jakarta'
 };
 
@@ -387,9 +388,12 @@ const PUBLIC = {
       }
       cache.remove(failKey);
       const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
-      const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now() };
-      cache.put('sess_' + token, JSON.stringify(sess), CONFIG.SESSION_SECONDS);
-      log_(sess, 10, 'Login admin', user.username, '');
+      const ingat = d.ingat === true || d.ingat === 'on' || d.ingat === 'YA';
+      const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now(), ingat: ingat,
+        exp: Date.now() + (ingat ? CONFIG.INGAT_HARI * 86400000 : CONFIG.SESSION_SECONDS * 1000) };
+      simpanSesi_(token, sess);
+      try { bersihkanSesi_(); } catch (e) { /* abaikan */ }
+      log_(sess, 10, 'Login admin' + (ingat ? ' (ingat perangkat ' + CONFIG.INGAT_HARI + ' hari)' : ''), user.username, '');
       return { token: token, user: { username: sess.username, nama: sess.nama, peran: sess.peran } };
     });
   }
@@ -400,7 +404,7 @@ const PUBLIC = {
 const ADMIN = {
   me: { fn: (d, u) => ({ username: u.username, nama: u.nama, peran: u.peran }) },
 
-  logout: { fn: (d, u) => { CacheService.getScriptCache().remove('sess_' + u._token); return true; } },
+  logout: { fn: (d, u) => { hapusSesi_(u._token); log_(u, 10, 'Logout admin', u.username, ''); return true; } },
 
   /** Ringkasan dasbor admin. */
   summary: {
@@ -625,8 +629,8 @@ const ADMIN = {
       const salt = Utilities.getUuid();
       update_('Pengguna', u.username, { salt: salt, password_hash: hash_(d.baru, salt) });
       cabutSesi_(u.username); // sesi lain (perangkat lain / token bocor) ikut berakhir
-      const c = CacheService.getScriptCache(); // sesi saat ini tetap aktif
-      c.put('sess_' + u._token, JSON.stringify({ username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000 }), CONFIG.SESSION_SECONDS);
+      // sesi saat ini tetap aktif
+      simpanSesi_(u._token, { username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000, ingat: !!u.ingat, exp: Number(u.exp) || (Date.now() + CONFIG.SESSION_SECONDS * 1000) });
       log_(u, 10, 'Ganti password', u.username, '');
       return true;
     }
@@ -1056,19 +1060,54 @@ function hash_(pw, salt) {
 
 function auth_(token) {
   if (!token) throw new Error('Sesi berakhir. Silakan login kembali.');
-  const cache = CacheService.getScriptCache();
-  const s = cache.get('sess_' + token);
-  if (!s) throw new Error('Sesi berakhir. Silakan login kembali.');
-  const sess = JSON.parse(s);
+  const sess = bacaSesi_(token);
+  if (!sess) throw new Error('Sesi berakhir. Silakan login kembali.');
   // periksa ulang akun setiap permintaan: akun nonaktif / peran berubah / password diganti langsung berlaku
   const u = rows_('Pengguna').find(r => String(r.username).toLowerCase() === String(sess.username).toLowerCase());
   const ver = Number(PropertiesService.getScriptProperties().getProperty('uver_' + String(sess.username).toLowerCase()) || 0);
   if (!u || String(u.aktif).toUpperCase() === 'TIDAK' || ver > Number(sess.t || 0)) {
-    cache.remove('sess_' + token);
+    hapusSesi_(token);
     throw new Error('Sesi berakhir. Silakan login kembali.');
   }
   sess.peran = u.peran; sess.nama = u.nama;
   return sess;
+}
+
+/* ---- Penyimpanan sesi ----
+ * Sesi biasa: CacheService (maks. 6 jam).
+ * Sesi "ingat saya": juga disimpan di Script Properties (kunci = hash token) sampai INGAT_HARI,
+ * lalu dimuat ulang ke cache bila cache sudah kedaluwarsa. */
+function sesiKey_(token) {
+  return 'sesi_' + Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(token), Utilities.Charset.UTF_8)
+    .map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('').slice(0, 40);
+}
+function simpanSesi_(token, sess) {
+  const sisa = Math.floor((Number(sess.exp) - Date.now()) / 1000);
+  if (sisa <= 0) return;
+  CacheService.getScriptCache().put('sess_' + token, JSON.stringify(sess), Math.min(CONFIG.SESSION_SECONDS, sisa));
+  if (sess.ingat) PropertiesService.getScriptProperties().setProperty(sesiKey_(token), JSON.stringify(sess));
+}
+function bacaSesi_(token) {
+  const c = CacheService.getScriptCache().get('sess_' + token);
+  if (c) return JSON.parse(c);
+  const props = PropertiesService.getScriptProperties();
+  const p = props.getProperty(sesiKey_(token));
+  if (!p) return null;
+  const sess = JSON.parse(p);
+  if (Number(sess.exp) <= Date.now()) { props.deleteProperty(sesiKey_(token)); return null; }
+  simpanSesi_(token, sess); // muat ulang ke cache
+  return sess;
+}
+function hapusSesi_(token) {
+  CacheService.getScriptCache().remove('sess_' + token);
+  PropertiesService.getScriptProperties().deleteProperty(sesiKey_(token));
+}
+function bersihkanSesi_() {
+  const props = PropertiesService.getScriptProperties(), all = props.getProperties(), now = Date.now();
+  Object.keys(all).forEach(k => {
+    if (k.indexOf('sesi_') !== 0) return;
+    try { if (Number(JSON.parse(all[k]).exp) <= now) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); }
+  });
 }
 
 /** Tandai semua sesi milik pengguna ini tidak berlaku (setelah ganti password / peran / nonaktif). */
