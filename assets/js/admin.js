@@ -155,8 +155,8 @@
         rows = all.filter(TABS[tab][1]).filter(r => (!fj || r.id_jadwal === fj) && (!q || [r.nama, r.no_reg, r.nik, r.email, r.nim].join(' ').toLowerCase().indexOf(q) >= 0));
         $('#tb').innerHTML = rows.length ? rows.map(r => `<tr class="clickable" data-no="${esc(r.no_reg)}">
           <td onclick="event.stopPropagation()"><input type="checkbox" class="ck" value="${esc(r.no_reg)}" ${sel.has(r.no_reg) ? 'checked' : ''}></td>
-          <td class="mono">${esc(r.no_reg)}<br><small class="muted">${tgl(r.waktu_daftar)}</small></td><td><b>${esc(r.nama)}</b><br><small class="muted">${esc(r.email)}</small></td>
-          <td>${esc(nmSkema(r.id_skema))}<br><small class="muted">${esc(jadwalLabel(r.id_jadwal))}</small></td>
+          <td class="mono">${esc(r.no_reg)}<br><small class="muted">${tgl(r.waktu_daftar)}</small></td><td class="c-nama"><b>${esc(r.nama)}</b><br><small class="muted">${esc(r.email)}</small></td>
+          <td class="c-skema">${esc(nmSkema(r.id_skema))}<br><small class="muted">${esc(jadwalLabel(r.id_jadwal))}</small></td>
           <td>${badge(kl(r))}</td><td>${badge(r.status_verifikasi)}</td><td>${badge(r.status_jadwal)}${r.tanggal_asesmen ? '<br><small>' + tgl(r.tanggal_asesmen) + '</small>' : ''}</td>
           <td>${badge(r.status_asesmen)}</td><td>${r.rekomendasi ? badge(r.rekomendasi) : '<small class="muted">-</small>'}</td><td>${r.rekomendasi === 'Kompeten' ? badge(r.status_sertifikat) : '<small class="muted">-</small>'}</td></tr>`).join('')
           : '<tr><td colspan="10" class="empty">Tidak ada data.</td></tr>';

@@ -188,7 +188,8 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 .topbar h1 { font-size: 1.2rem; margin: 0; }
 .topbar .spacer { flex: 1; }
 .topbar .menu-btn { margin-left: 0; }
-.view { padding: 24px 28px 48px; max-width: 1200px; width: 100%; }
+.view { padding: 24px 28px 48px; width: 100%; min-width: 0; }
+.view .form, .view .narrow { max-width: 1100px; }
 .scrim { display: none; }
 .demo-flag { background: var(--amber-soft); color: var(--amber); font-size: .78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 @media (max-width: 960px) {
@@ -273,7 +274,13 @@ legend { font-family: var(--display); font-weight: 700; font-size: 1rem; padding
 /* Tabel */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--white); }
 table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.table-wrap td.mono { white-space: nowrap; }
+.table-wrap td .badge { white-space: normal; line-height: 1.35; padding: 3px 9px; }
+.table-wrap td.c-skema { min-width: 190px; }
+.table-wrap td.c-nama { min-width: 150px; }
+@media (max-width: 1440px) { .view { padding-left: 20px; padding-right: 20px; } .table-wrap td.c-skema { min-width: 170px; } .table-wrap th, .table-wrap td { padding: 9px 8px; } .table-wrap td.c-nama small { overflow-wrap: anywhere; } }
+.table-wrap td.c-ket { min-width: 220px; }
 th { background: var(--paper); font-size: .82rem; color: var(--muted); font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: 0; }
 tbody tr.clickable { cursor: pointer; }
@@ -401,6 +408,7 @@ td.mono { white-space: nowrap; }
   .toolbar input:not([type=checkbox]), .toolbar select { min-width: 0; flex: 1 1 140px; }
   /* tabel menjadi kartu per baris */
   .table-wrap { overflow-x: visible; }
+  .table-wrap td.c-skema, .table-wrap td.c-nama, .table-wrap td.c-ket { min-width: 0; }
   .table-wrap table thead { display: none; }
   .table-wrap table, .table-wrap table tbody { display: block; width: 100%; }
   .table-wrap table tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
