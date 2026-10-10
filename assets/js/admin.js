@@ -4,6 +4,7 @@
   const app = $('#app');
   let USER = null;
   let REF = { Skema: [], TUK: [], Asesor: [], Jadwal: [] };
+  let PRE = null; // ringkasan yang sudah ikut terkirim di panggilan pembuka
   const byId = (arr, k) => { const m = {}; arr.forEach(r => m[r[k]] = r); return m; };
   const nmSkema = (id) => (REF.Skema.find(s => s.id_skema === id) || {}).nama_skema || id || '-';
   const nmTuk = (id) => (REF.TUK.find(s => s.id_tuk === id) || {}).nama_tuk || id || '-';
@@ -44,11 +45,12 @@
       busy($('button', f), async () => {
         try {
           const d = formData(f);
-          const r = await api('login', d);
+          const r = await api('login', Object.assign({}, d, { awal: true, ringkasan: halamanAwal() === 'ringkasan' }));
           store.set('sipintar_token', r.token, !!d.ingat);
           store.set('sipintar_user', JSON.stringify(r.user), !!d.ingat);
           USER = r.user;
-          await boot();
+          if (r.awal && r.awal.ref) { REF = r.awal.ref; PRE = r.awal.summary || null; await boot(true); }
+          else await boot();
         } catch (err) { $('#lOut').innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; }
       });
     });
@@ -83,9 +85,12 @@
     REF = { Skema: a, TUK: b, Asesor: c, Jadwal: d };
   }
 
-  async function boot() {
+  // halaman yang akan dibuka pertama; ringkasan awal bisa ikut dalam panggilan pembuka
+  function halamanAwal() { return (location.hash.replace(/^#\/?/, '') || 'ringkasan').split('/')[0]; }
+
+  async function boot(sudahRef) {
     shell();
-    try { await loadRef(); } catch (e) { if (/Sesi/.test(e.message)) return loginView(e.message); toast(e.message, 'bad'); }
+    if (!sudahRef) try { await loadRef(); } catch (e) { if (/Sesi/.test(e.message)) return loginView(e.message); toast(e.message, 'bad'); }
     window.onhashchange = route;
     route();
   }
@@ -110,7 +115,7 @@
   /* ---------------- Halaman ---------------- */
   const PAGES = {
     async ringkasan(v) {
-      const s = await api('summary');
+      const s = PRE || await api('summary'); PRE = null;
       const tile = (k, n, tab) => `<div class="stat clickable" onclick="location.hash='#/pendaftar/${tab}'"><div class="k">${esc(k)}</div><div class="v">${n}</div></div>`;
       v.innerHTML = `
         <div class="welcome"><div><h2>Selamat datang, ${esc(USER.nama)}</h2><p>${esc(USER.peran)}, bekerja mengikuti SOP ${esc(SOP.nomor)}</p></div><a class="btn sm ghost" href="index.html" target="_blank">Buka situs publik</a></div>
@@ -622,6 +627,16 @@
   /* ---------------- Mulai ---------------- */
   (async () => {
     if (!store.get('sipintar_token')) return loginView();
-    try { USER = await api('me'); await boot(); } catch (e) { store.del('sipintar_token'); loginView(); }
+    // satu panggilan pembuka: akun + data referensi (+ ringkasan); cadangan ke cara lama bila backend belum diperbarui
+    let a = null;
+    try { a = await api('awal', { ringkasan: halamanAwal() === 'ringkasan' }); }
+    catch (e) {
+      if (/Sesi/i.test(e.message)) { store.del('sipintar_token'); return loginView(); }
+      if (!/tidak dikenal/i.test(e.message)) return loginView(e.message); // gangguan jaringan: token tetap disimpan
+    }
+    try {
+      if (a) { USER = a.me; REF = a.ref; PRE = a.summary || null; await boot(true); }
+      else { USER = await api('me'); await boot(); }
+    } catch (e) { store.del('sipintar_token'); loginView(); }
   })();
 })();

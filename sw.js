@@ -3,7 +3,7 @@
  * Catatan: permintaan ke Apps Script (script.google.com) TIDAK di-cache,
  * selalu lewat jaringan supaya data sertifikasi tetap segar.
  */
-const CACHE = 'sipintar-v6';
+const CACHE = 'sipintar-v7';
 const CORE = [
   './',
   './index.html',

@@ -215,12 +215,13 @@
       sessions[token] = s;
       try { localStorage.setItem('sipintar_demo_sess_' + token, JSON.stringify(s)); } catch (e) { /* abaikan */ }
       db.Akses.push({ waktu: now(), aktor: s.nama, peran: s.peran, langkah_sop: '10', aksi: 'Login admin', ref: u.username, detail: '' });
-      return { token, user: s };
+      return Object.assign({ token, user: s }, d.awal ? { awal: Object.assign({ ref: ADMIN.refData() }, d.ringkasan ? { summary: ADMIN.summary() } : {}) } : {});
     }
   };
 
   const ADMIN = {
     me: (d, u) => u,
+    awal: (d, u) => Object.assign({ me: u, ref: ADMIN.refData() }, d && d.ringkasan ? { summary: ADMIN.summary() } : {}),
     logout: () => true,
     summary: () => {
       const p = db.Pendaftaran, c = f => p.filter(f).length, sv = db.Survei;

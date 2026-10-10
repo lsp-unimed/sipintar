@@ -380,7 +380,7 @@ const PUBLIC = {
     const cache = CacheService.getScriptCache();
     const failKey = 'fail_' + u;
     // seluruh proses di dalam kunci agar penghitung gagal tidak bisa diakali dengan permintaan paralel
-    return withLock_(() => {
+    const hasil = withLock_(() => {
       const fails = Number(cache.get(failKey) || 0);
       if (fails >= 5) throw new Error('Terlalu banyak percobaan gagal. Coba lagi 10 menit lagi.');
       const user = rows_('Pengguna').find(r => String(r.username).toLowerCase() === u);
@@ -400,6 +400,9 @@ const PUBLIC = {
       akses_(sess, 'Login admin' + (ingat ? ' (ingat perangkat ' + CONFIG.INGAT_HARI + ' hari)' : ''), user.username, '');
       return { token: token, user: { username: sess.username, nama: sess.nama, peran: sess.peran } };
     });
+    // data awal panel ikut dikirim (di luar kunci) agar panel terbuka tanpa panggilan tambahan
+    if (d.awal) { try { hasil.awal = awalPanel_(!!d.ringkasan); } catch (e) { /* panel akan memuat sendiri */ } }
+    return hasil;
   }
 };
 
@@ -407,6 +410,9 @@ const PUBLIC = {
 
 const ADMIN = {
   me: { fn: (d, u) => ({ username: u.username, nama: u.nama, peran: u.peran }) },
+
+  /** Pembukaan panel dalam satu panggilan: akun + data referensi (+ ringkasan bila halaman awalnya Ringkasan). */
+  awal: { fn: (d, u) => Object.assign({ me: { username: u.username, nama: u.nama, peran: u.peran } }, awalPanel_(!!(d && d.ringkasan))) },
 
   logout: { fn: (d, u) => { hapusSesi_(u._token); akses_(u, 'Logout admin', u.username, ''); return true; } },
 
@@ -620,6 +626,7 @@ const ADMIN = {
           if (!d.password) throw new Error('Password wajib untuk pengguna baru.');
           append_('Pengguna', Object.assign({ username: un }, patch));
         }
+        lupakanAkun_(un);
         akses_(u, (ada ? 'Ubah' : 'Tambah') + ' pengguna', un, d.peran + (patch.aktif === 'TIDAK' ? ' (nonaktif)' : '') + (d.password ? ' · password diatur ulang' : ''));
         return true;
       });
@@ -968,6 +975,7 @@ function resetPasswordAdmin() {
   const ada = rows_('Pengguna').find(r => r.username === 'admin');
   if (ada) update_('Pengguna', 'admin', { salt: salt, password_hash: hash_(pw, salt), aktif: 'YA', peran: 'Admin' });
   else append_('Pengguna', { username: 'admin', nama: 'Administrator LSP', peran: 'Admin', salt: salt, password_hash: hash_(pw, salt), aktif: 'YA' });
+  cabutSesi_('admin');
   Logger.log('Password baru admin: ' + pw);
 }
 
@@ -1215,7 +1223,7 @@ function auth_(token) {
   const sess = bacaSesi_(token);
   if (!sess) throw new Error('Sesi berakhir. Silakan login kembali.');
   // periksa ulang akun setiap permintaan: akun nonaktif / peran berubah / password diganti langsung berlaku
-  const u = rows_('Pengguna').find(r => String(r.username).toLowerCase() === String(sess.username).toLowerCase());
+  const u = akun_(sess.username);
   const ver = Number(PropertiesService.getScriptProperties().getProperty('uver_' + String(sess.username).toLowerCase()) || 0);
   if (!u || String(u.aktif).toUpperCase() === 'TIDAK' || ver > Number(sess.t || 0)) {
     hapusSesi_(token);
@@ -1223,6 +1231,27 @@ function auth_(token) {
   }
   sess.peran = u.peran; sess.nama = u.nama;
   return sess;
+}
+
+/** Data akun untuk pemeriksaan sesi; disimpan 60 detik di cache dan dihapus setiap akun diubah. */
+function akun_(username) {
+  const un = String(username || '').toLowerCase(), c = CacheService.getScriptCache(), k = 'akun_' + un;
+  const hit = c.get(k);
+  if (hit) return JSON.parse(hit);
+  const r = rows_('Pengguna').find(x => String(x.username).toLowerCase() === un);
+  const o = r ? { username: r.username, nama: r.nama, peran: r.peran, aktif: r.aktif } : null;
+  if (o) { try { c.put(k, JSON.stringify(o), 60); } catch (e) { /* abaikan */ } }
+  return o;
+}
+function lupakanAkun_(username) {
+  try { CacheService.getScriptCache().remove('akun_' + String(username || '').toLowerCase()); } catch (e) { /* abaikan */ }
+}
+
+/** Data awal panel admin (referensi + ringkasan opsional) dalam satu eksekusi. */
+function awalPanel_(denganRingkasan) {
+  const o = { ref: ADMIN.refData.fn() };
+  if (denganRingkasan) o.summary = ADMIN.summary.fn();
+  return o;
 }
 
 /* ---- Penyimpanan sesi ----
@@ -1264,6 +1293,7 @@ function bersihkanSesi_() {
 
 /** Tandai semua sesi milik pengguna ini tidak berlaku (setelah ganti password / peran / nonaktif). */
 function cabutSesi_(username) {
+  lupakanAkun_(username);
   PropertiesService.getScriptProperties().setProperty('uver_' + String(username).toLowerCase(), String(Date.now()));
 }
 
