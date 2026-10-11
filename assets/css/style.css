@@ -428,3 +428,11 @@ td.mono { white-space: nowrap; }
   .modal-body .card { padding: 14px; }
   .welcome { flex-wrap: wrap; gap: 10px; }
 }
+
+/* Tautan antar-aplikasi di halaman login */
+.login-links { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .88rem; }
+.login-links a { font-weight: 600; }
+/* Peran lihat saja (Ketua LSP, Bidang Skema): sembunyikan semua kendali ubah */
+body.lihat-saja form[data-tahap], body.lihat-saja #bulk, body.lihat-saja #bKel, body.lihat-saja #bVer, body.lihat-saja #bPlot,
+body.lihat-saja #bAs, body.lihat-saja #bClr, body.lihat-saja #nsel, body.lihat-saja .ck, body.lihat-saja #ckAll,
+body.lihat-saja #fP, body.lihat-saja #fT, body.lihat-saja #fB { display: none !important; }

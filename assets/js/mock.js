@@ -1,7 +1,7 @@
 /* MODE DEMO — tiruan backend di browser. Aktif hanya jika API_URL di config.js kosong.
    Data contoh disimpan di localStorage browser ini saja. Akun demo: admin / demo12345 */
 (function () {
-  const KEY = 'sipintar_demo_db_v6';
+  const KEY = 'sipintar_demo_db_v7';
   const SEED = window.SIPINTAR_SEED || { skema: [], tuk: [] };
   const pad = (n, w) => String(n).padStart(w, '0');
   const now = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2) + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2) + ':' + pad(d.getSeconds(), 2); };
@@ -45,7 +45,7 @@
           ['FR.APL.01', 'Contoh pengisian APL-01 — ', 'Contoh Pengisian'], ['FR.APL.02', 'Contoh pengisian APL-02 — ', 'Contoh Pengisian']]
           .map(d => ({ nomor: d[0], judul: d[1] + k.nama, kategori: d[2], id_skema: id, link: '', status: 'Aktif' }));
       })).map((r, i) => Object.assign({ id_dok: 'DOK-' + pad(4 + i, 3) }, r))),
-      Pengguna: [{ username: 'admin', nama: 'Administrator (Demo)', peran: 'Admin', password: 'demo12345', aktif: 'YA' }]
+      Pengguna: [{ username: 'admin', nama: 'Administrator (Demo)', peran: 'Admin', password: 'demo12345', aktif: 'YA' }, { username: 'ketua', nama: 'Ketua LSP (Demo)', peran: 'Ketua LSP', password: 'demo12345', aktif: 'YA' }]
     };
     // contoh peserta di berbagai tahap
     const contoh = [

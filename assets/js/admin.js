@@ -4,7 +4,8 @@
   const app = $('#app');
   let USER = null;
   let REF = { Skema: [], TUK: [], Asesor: [], Jadwal: [] };
-  let PRE = null; // ringkasan yang sudah ikut terkirim di panggilan pembuka
+  let PRE = null;
+  const LIHAT_SAJA = ['Ketua LSP', 'Bidang Skema']; // ringkasan yang sudah ikut terkirim di panggilan pembuka
   const byId = (arr, k) => { const m = {}; arr.forEach(r => m[r[k]] = r); return m; };
   const nmSkema = (id) => (REF.Skema.find(s => s.id_skema === id) || {}).nama_skema || id || '-';
   const nmTuk = (id) => (REF.TUK.find(s => s.id_tuk === id) || {}).nama_tuk || id || '-';
@@ -37,7 +38,7 @@
       <label class="f">Password<input name="password" type="password" autocomplete="current-password" required></label>
       <label class="check"><input type="checkbox" name="ingat"> <span>Ingat saya di perangkat ini (7 hari)<br><small class="muted">Centang hanya di HP/komputer pribadi. Jangan dicentang di komputer bersama.</small></span></label>
       <button class="btn block" type="submit">${icon('lock')} Masuk</button>
-      <a href="index.html" class="muted" style="font-size:.88rem">Kembali ke layanan publik</a>
+      <div class="login-links"><span class="muted">Aplikasi lain:</span><a href="index.html">SIPINTAR publik</a><a href="${esc(CFG.ARSIP_URL || 'https://lsp-unimed.github.io/arsip/')}">Arsip Dokumen</a></div>
       <div id="lOut"></div></form></div></div>`;
     const f = $('#fLogin');
     f.addEventListener('submit', (e) => {
@@ -89,6 +90,8 @@
   function halamanAwal() { return (location.hash.replace(/^#\/?/, '') || 'ringkasan').split('/')[0]; }
 
   async function boot(sudahRef) {
+    // Ketua LSP & Bidang Skema: lihat saja (formulir dan tombol ubah disembunyikan; server juga menolak).
+    document.body.classList.toggle('lihat-saja', LIHAT_SAJA.indexOf(USER && USER.peran) >= 0);
     shell();
     if (!sudahRef) try { await loadRef(); } catch (e) { if (/Sesi/.test(e.message)) return loginView(e.message); toast(e.message, 'bad'); }
     window.onhashchange = route;
@@ -118,7 +121,7 @@
       const s = PRE || await api('summary'); PRE = null;
       const tile = (k, n, tab) => `<div class="stat clickable" onclick="location.hash='#/pendaftar/${tab}'"><div class="k">${esc(k)}</div><div class="v">${n}</div></div>`;
       v.innerHTML = `
-        <div class="welcome"><div><h2>Selamat datang, ${esc(USER.nama)}</h2><p>${esc(USER.peran)}, bekerja mengikuti SOP ${esc(SOP.nomor)}</p></div><a class="btn sm ghost" href="index.html" target="_blank">Buka situs publik</a></div>
+        <div class="welcome"><div>${LIHAT_SAJA.indexOf(USER.peran) >= 0 ? '<span class="badge info" style="margin-bottom:6px">Akses lihat saja</span>' : ''}<h2>Selamat datang, ${esc(USER.nama)}</h2><p>${esc(USER.peran)}, bekerja mengikuti SOP ${esc(SOP.nomor)}</p></div><a class="btn sm ghost" href="index.html" target="_blank">Buka situs publik</a></div>
         <div class="grid g4 stats" style="margin-bottom:16px">
           ${tile('Total pendaftar', s.total, 'semua')}${tile('Cek kelengkapan (L2)', s.menunggu_kelengkapan || 0, 'kelengkapan')}${tile('Verifikasi langsung (L3)', s.menunggu_verifikasi, 'verifikasi')}
           ${tile('Siap dijadwalkan (L4)', s.siap_dijadwalkan, 'jadwal')}${tile('Terjadwal / asesmen (L5–6)', s.terjadwal, 'asesmen')}
@@ -258,12 +261,12 @@
       v.innerHTML = `<div class="card"><div class="card-head"><h3>Pengguna panel admin</h3><button class="btn sm" id="add">${icon('plus')} Tambah</button></div>
         <div class="table-wrap"><table><thead><tr><th>Username</th><th>Nama</th><th>Peran</th><th>Aktif</th></tr></thead><tbody>
         ${rows.map(u => `<tr class="clickable" data-u="${esc(u.username)}"><td class="mono">${esc(u.username)}</td><td>${esc(u.nama)}</td><td>${esc(u.peran)}</td><td>${badge(u.aktif)}</td></tr>`).join('')}</tbody></table></div>
-        <p class="muted" style="margin-top:12px">Peran mengikuti penanggung jawab SOP: Sekretariat LSP (L1, L5, L10), Bagian Administrasi (L2, L8), Bagian Sertifikasi (L3, L4, L6, L7), Bagian Manajemen Mutu (L9). Admin dapat melakukan semua tahap.</p></div>`;
+        <p class="muted" style="margin-top:12px">Peran mengikuti penanggung jawab SOP: Sekretariat LSP (L1, L5, L10), Bagian Administrasi (L2, L8), Bagian Sertifikasi (L3, L4, L6, L7), Bagian Manajemen Mutu (L9). Admin dapat melakukan semua tahap. Ketua LSP dan Bidang Skema hanya dapat melihat di SIPINTAR; peran utama mereka di aplikasi Arsip. Akun yang sama dipakai untuk masuk ke Arsip Dokumen.</p></div>`;
       const open = (u) => {
         const m = modal(u ? 'Ubah pengguna' : 'Tambah pengguna', `<form class="form" id="fU">
           <label class="f">Username<input name="username" value="${esc(u ? u.username : '')}" ${u ? 'readonly' : ''} required></label>
           <label class="f">Nama<input name="nama" value="${esc(u ? u.nama : '')}" required></label>
-          <div class="row"><label class="f">Peran<select name="peran">${['Admin', 'Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Bagian Manajemen Mutu'].map(p => `<option ${u && u.peran === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+          <div class="row"><label class="f">Peran<select name="peran">${['Admin', 'Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Bagian Manajemen Mutu', 'Ketua LSP', 'Bidang Skema'].map(p => `<option ${u && u.peran === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
           <label class="f">Aktif<select name="aktif"><option ${u && u.aktif === 'YA' ? 'selected' : ''}>YA</option><option ${u && u.aktif === 'TIDAK' ? 'selected' : ''}>TIDAK</option></select></label></div>
           <label class="f">Password ${u ? '<small>(kosongkan jika tidak diubah)</small>' : ''}<input type="password" name="password" minlength="8" autocomplete="new-password"></label>
           <div><button class="btn" type="submit">Simpan</button></div></form>`);

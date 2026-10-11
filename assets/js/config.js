@@ -9,5 +9,6 @@ window.SIPINTAR_CONFIG = {
   NAMA_LSP: 'LSP UNIMED',
   LOGO_URL: 'assets/img/favicon-192.png',   // lambang LSP UNIMED (header & sidebar)
   LOGO_FULL: 'assets/img/logo-lsp.png',     // logo lengkap LSP UNIMED (beranda, login, bukti daftar)
-  MAX_FILE_MB: 2
+  MAX_FILE_MB: 2,
+  ARSIP_URL: 'https://lsp-unimed.github.io/arsip/'   // aplikasi Arsip Dokumen (akun sama dengan panel admin)
 };

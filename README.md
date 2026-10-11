@@ -100,6 +100,8 @@ Kuota email harian Apps Script terbatas (akun Google Workspace lebih besar darip
 | L9 tindak lanjut keluhan | ✓ | – | – | – | ✓ |
 | Lihat semua data & rekaman | ✓ | ✓ | ✓ | ✓ | ✓ |
 
+Peran **Ketua LSP** dan **Bidang Skema** hanya dapat melihat di SIPINTAR (Ketua juga dapat membuka berkas pendaftar dan catatan akses). Akun di sheet Pengguna dipakai bersama oleh aplikasi **Arsip Dokumen** (username dan password sama).
+
 ## 7. Keamanan & kerahasiaan data
 
 - Peserta hanya bisa melihat datanya dengan **No. Registrasi + email**. Di sisi publik, NIK disamarkan dan nama di halaman plotting juga disamarkan.

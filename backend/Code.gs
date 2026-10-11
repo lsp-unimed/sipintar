@@ -61,9 +61,11 @@ const ID_PREFIX = { Skema: 'SKM', TUK: 'TUK', Asesor: 'ASR', Jadwal: 'JDW', Doku
 
 const MASTER_SHEETS = ['Skema', 'TUK', 'Asesor', 'Jadwal', 'Dokumen', 'Pengaturan'];
 const READABLE_SHEETS = MASTER_SHEETS.concat(['Keluhan', 'Layanan', 'Survei', 'Log', 'Akses']);
-const PERAN_LIHAT_AKSES = ['Admin', 'Sekretariat LSP', 'Bagian Manajemen Mutu']; // catatan akses (login, buka berkas)
+const PERAN_LIHAT_AKSES = ['Admin', 'Sekretariat LSP', 'Bagian Manajemen Mutu', 'Ketua LSP']; // catatan akses (login, buka berkas)
 
-const PERAN = ['Admin', 'Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Bagian Manajemen Mutu'];
+const PERAN = ['Admin', 'Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Bagian Manajemen Mutu', 'Ketua LSP', 'Bidang Skema'];
+// Ketua LSP & Bidang Skema: lihat saja di SIPINTAR (tidak ada di daftar roles aksi tahapan); peran utama mereka di aplikasi Arsip.
+const PERAN_LIHAT_SAJA = ['Ketua LSP', 'Bidang Skema'];
 
 const ST = {
   VERIF: ['Menunggu Verifikasi', 'Memenuhi Syarat', 'Perlu Perbaikan', 'Tidak Memenuhi Syarat'],
@@ -393,7 +395,7 @@ const PUBLIC = {
       cache.remove(failKey);
       const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
       const ingat = d.ingat === true || d.ingat === 'on' || d.ingat === 'YA';
-      const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now(), ingat: ingat,
+      const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now(), ingat: ingat, sk: String(user.salt || '').slice(0, 12),
         exp: Date.now() + (ingat ? CONFIG.INGAT_HARI * 86400000 : CONFIG.SESSION_SECONDS * 1000) };
       simpanSesi_(token, sess);
       try { bersihkanSesi_(); } catch (e) { /* abaikan */ }
@@ -471,7 +473,7 @@ const ADMIN = {
    * d = { sheet: 'Pendaftaran'|'Layanan', id: no_reg|no_layanan, kolom: 'file_ktp'|... }
    */
   lihatBerkas: {
-    roles: ['Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi'],
+    roles: ['Sekretariat LSP', 'Bagian Administrasi', 'Bagian Sertifikasi', 'Ketua LSP'],
     fn: (d, u) => {
       const sumber = d.sheet === 'Layanan' ? 'Layanan' : 'Pendaftaran';
       const kunci = sumber === 'Layanan' ? 'no_layanan' : 'no_reg';
@@ -642,7 +644,7 @@ const ADMIN = {
       update_('Pengguna', u.username, { salt: salt, password_hash: hash_(d.baru, salt) });
       cabutSesi_(u.username); // sesi lain (perangkat lain / token bocor) ikut berakhir
       // sesi saat ini tetap aktif
-      simpanSesi_(u._token, { username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000, ingat: !!u.ingat, exp: Number(u.exp) || (Date.now() + CONFIG.SESSION_SECONDS * 1000) });
+      simpanSesi_(u._token, { username: u.username, nama: u.nama, peran: u.peran, t: Date.now() + 1000, ingat: !!u.ingat, sk: String(salt).slice(0, 12), exp: Number(u.exp) || (Date.now() + CONFIG.SESSION_SECONDS * 1000) });
       akses_(u, 'Ganti password', u.username, '');
       return true;
     }
@@ -1225,7 +1227,7 @@ function auth_(token) {
   // periksa ulang akun setiap permintaan: akun nonaktif / peran berubah / password diganti langsung berlaku
   const u = akun_(sess.username);
   const ver = Number(PropertiesService.getScriptProperties().getProperty('uver_' + String(sess.username).toLowerCase()) || 0);
-  if (!u || String(u.aktif).toUpperCase() === 'TIDAK' || ver > Number(sess.t || 0)) {
+  if (!u || String(u.aktif).toUpperCase() === 'TIDAK' || ver > Number(sess.t || 0) || (sess.sk && u.sk && sess.sk !== u.sk)) {
     hapusSesi_(token);
     throw new Error('Sesi berakhir. Silakan login kembali.');
   }
@@ -1239,7 +1241,7 @@ function akun_(username) {
   const hit = c.get(k);
   if (hit) return JSON.parse(hit);
   const r = rows_('Pengguna').find(x => String(x.username).toLowerCase() === un);
-  const o = r ? { username: r.username, nama: r.nama, peran: r.peran, aktif: r.aktif } : null;
+  const o = r ? { username: r.username, nama: r.nama, peran: r.peran, aktif: r.aktif, sk: String(r.salt || '').slice(0, 12) } : null;
   if (o) { try { c.put(k, JSON.stringify(o), 60); } catch (e) { /* abaikan */ } }
   return o;
 }
