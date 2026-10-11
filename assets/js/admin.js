@@ -136,7 +136,7 @@
             <a href="#/pendaftar">${icon('users')}<span>Pendaftar & tahapan</span></a>
             <a href="#/plotting">${icon('grid')}<span>Plotting massal</span></a>
             <a href="#/layanan">${icon('stamp')}<span>Layanan pasca-uji</span></a>
-            <a href="${esc(CFG.ARSIP_URL || 'https://lsp-unimed.github.io/arsip/')}" target="_blank" rel="noopener">${icon('file')}<span>Arsip Dokumen ↗</span></a>
+            <a href="#/keluhan">${icon('chat')}<span>Keluhan (L9)</span></a>
           </div></div>
         </div>`;
     },
