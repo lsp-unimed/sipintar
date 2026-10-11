@@ -61,7 +61,7 @@
   const NAV = [
     { group: null, items: [['ringkasan', 'Ringkasan', 'home']] },
     { group: 'Alur Sertifikasi', items: [['pendaftar', 'Pendaftar & Tahapan', 'users'], ['plotting', 'Plotting Massal', 'grid']] },
-    { group: 'Layanan & Mutu', items: [['keluhan', 'Keluhan (L9)', 'chat'], ['layanan', 'Layanan Pasca-Uji', 'stamp'], ['survei', 'Survei Kepuasan', 'star'], ['rekaman', 'Rekaman & Log (L10)', 'log']] },
+    { group: 'Layanan & Mutu', items: [['keluhan', 'Keluhan (L9)', 'chat'], ['layanan', 'Layanan Pasca-Uji', 'stamp'], ['survei', 'Survei Kepuasan', 'star']] },
     { group: 'Data Master', items: [['Skema', 'Skema', 'book'], ['Jadwal', 'Jadwal', 'cal'], ['TUK', 'TUK', 'pin'], ['Asesor', 'Asesor', 'user'], ['Dokumen', 'Dokumen Mutu', 'file'], ['Pengaturan', 'Pengaturan', 'gear']] },
     { group: 'Akun', items: [['pengguna', 'Pengguna', 'shield'], ['akun', 'Ganti Password', 'lock']] }
   ];
@@ -127,12 +127,18 @@
           ${tile('Siap dijadwalkan (L4)', s.siap_dijadwalkan, 'jadwal')}${tile('Terjadwal / asesmen (L5–6)', s.terjadwal, 'asesmen')}
           ${tile('Kompeten (L7)', s.kompeten, 'hasil')}${tile('Sertifikat diproses (L8)', s.sertifikat_proses, 'sertifikat')}
           <div class="stat clickable" onclick="location.hash='#/keluhan'"><div class="k">Keluhan terbuka (L9)</div><div class="v">${s.keluhan_terbuka}</div></div>
-          <div class="stat clickable" onclick="location.hash='#/survei'"><div class="k">Kepuasan (${s.survei_n} resp.)</div><div class="v">${s.survei_n ? s.survei_rata + '<small style="font-size:1rem">/5</small>' : '-'}</div></div>
         </div>
         ${s.perlu_perbaikan ? `<div class="notice">${s.perlu_perbaikan} pendaftar berstatus <b>Perlu Perbaikan</b> — pantau tindak lanjut dokumen.</div>` : ''}
         ${s.layanan_terbuka ? `<div class="notice info">${s.layanan_terbuka} permohonan layanan pasca-uji (banding/surveilans/legalisir/RCC) belum selesai. <a href="#/layanan">Buka</a></div>` : ''}
-        <div class="card"><div class="card-head"><h3>Aktivitas terbaru (rekaman pelayanan)</h3><a class="btn sm ghost" href="#/rekaman">Semua rekaman</a></div>
-          ${logTable(s.logs)}</div>`;
+        <div class="grid g2 ring-bawah">
+          <a class="card puas" href="#/survei"><div><div class="k">Kepuasan peserta</div><div class="v">${s.survei_n ? s.survei_rata + '<small>/5</small>' : '–'}</div><div class="muted">${s.survei_n ? s.survei_n + ' responden survei' : 'Belum ada responden survei'}</div></div><div class="bintang" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<span class="${s.survei_n && s.survei_rata >= i - 0.25 ? 'on' : ''}">★</span>`).join('')}</div></a>
+          <div class="card"><h3 style="margin:0 0 10px">Pintasan</h3><div class="pintas">
+            <a href="#/pendaftar">${icon('users')}<span>Pendaftar & tahapan</span></a>
+            <a href="#/plotting">${icon('grid')}<span>Plotting massal</span></a>
+            <a href="#/layanan">${icon('stamp')}<span>Layanan pasca-uji</span></a>
+            <a href="${esc(CFG.ARSIP_URL || 'https://lsp-unimed.github.io/arsip/')}" target="_blank" rel="noopener">${icon('file')}<span>Arsip Dokumen ↗</span></a>
+          </div></div>
+        </div>`;
     },
 
     async pendaftar(v, args) {
@@ -234,26 +240,6 @@
       $('#exp').onclick = () => csv(rows, [{ key: 'waktu' }, { key: 'no_reg' }].concat(K.map(k => ({ key: k[0], label: k[1] }))).concat([{ key: 'saran' }]), 'survei-kepuasan.csv');
     },
 
-    async rekaman(v, args) {
-      const bolehAkses = ['Admin', 'Sekretariat LSP', 'Bagian Manajemen Mutu'].indexOf(USER.peran) >= 0;
-      const jenis = args && args[0] === 'akses' && bolehAkses ? 'Akses' : 'Log';
-      const rows = await api('listSheet', { sheet: jenis });
-      v.innerHTML = `${bolehAkses ? `<div class="tabs" style="margin-bottom:12px"><button class="${jenis === 'Log' ? 'on' : ''}" onclick="location.hash='#/rekaman'">Rekaman pelayanan</button><button class="${jenis === 'Akses' ? 'on' : ''}" onclick="location.hash='#/rekaman/akses'">Catatan akses</button></div>` : ''}
-        <div class="notice info">${jenis === 'Log'
-          ? 'Langkah 10 SOP — seluruh aktivitas pelayanan tercatat otomatis (waktu, admin, peran, langkah SOP, referensi) sehingga mampu telusur. Sheet rekaman dilindungi: hanya sistem yang dapat menulis. Rekaman peserta yang sudah selesai lebih dari 12 bulan dipindah ke file arsip tahunan.'
-          : 'Catatan akses — login, logout, pembukaan berkas peserta, dan pengelolaan akun. Dipisah dari rekaman pelayanan agar rekaman tetap ringkas; catatan lebih dari 3 bulan dipindah ke file arsip tahunan.'}</div>
-        <div class="toolbar"><input id="q" placeholder="Cari No. Reg / tiket / admin / aktivitas…">${jenis === 'Log' ? `<select id="fl"><option value="">Semua langkah</option>${SOP.langkah.map(l => `<option value="${l.no}">L${l.no} ${esc(l.nama)}</option>`).join('')}</select>` : ''}<button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
-        <div id="lt"></div>`;
-      let cur = rows;
-      const draw = () => {
-        const q = $('#q').value.toLowerCase(), l = $('#fl') ? $('#fl').value : '';
-        cur = rows.filter(r => (!l || String(r.langkah_sop) === l) && (!q || [r.ref, r.aktor, r.aksi, r.detail].join(' ').toLowerCase().indexOf(q) >= 0));
-        $('#lt').innerHTML = logTable(cur.slice(0, 500)) + (cur.length > 500 ? `<p class="muted">Menampilkan 500 dari ${cur.length}. Gunakan filter atau unduh CSV.</p>` : '');
-      };
-      $('#q').oninput = draw; if ($('#fl')) $('#fl').onchange = draw;
-      $('#exp').onclick = () => csv(cur, ['waktu', 'aktor', 'peran', 'langkah_sop', 'aksi', 'ref', 'detail'].map(k => ({ key: k })), jenis === 'Log' ? 'rekaman-pelayanan.csv' : 'catatan-akses.csv');
-      draw();
-    },
 
     async pengguna(v) {
       if (USER.peran !== 'Admin') { v.innerHTML = '<div class="notice">Pengelolaan pengguna hanya untuk peran Admin.</div>'; return; }
@@ -285,11 +271,6 @@
     }
   };
 
-  function logTable(rows) {
-    return `<div class="table-wrap"><table><thead><tr><th>Waktu</th><th>L</th><th>Aktivitas</th><th>Ref</th><th>Admin</th></tr></thead><tbody>
-      ${rows.map(l => `<tr><td style="white-space:nowrap">${tgl(l.waktu)}</td><td><span class="badge info">${esc(l.langkah_sop)}</span></td><td>${esc(l.aksi)}${l.detail ? '<br><small class="muted">' + esc(l.detail) + '</small>' : ''}</td><td class="mono">${esc(l.ref)}</td><td>${esc(l.aktor)}<br><small class="muted">${esc(l.peran)}</small></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Belum ada rekaman.</td></tr>'}
-    </tbody></table></div>`;
-  }
 
   /* ---------------- Detail peserta & formulir tahapan ---------------- */
   function stageForms(r) {
@@ -325,7 +306,7 @@
   }
 
   async function detail(no, onChange) {
-    const m = modal('Peserta ' + no, loading(), { wide: true, headExtra: `<button class="btn sm ghost no-print" id="pr">${icon('print')} Cetak rekaman</button>`, onClose: () => changed && onChange && onChange() });
+    const m = modal('Peserta ' + no, loading(), { wide: true, headExtra: `<button class="btn sm ghost no-print" id="pr">${icon('print')} Cetak data peserta</button>`, onClose: () => changed && onChange && onChange() });
     let changed = false;
     let current = null;
     $('#pr', m.el).onclick = () => { if (current) cetakRekaman(current); else toast('Data belum selesai dimuat.', 'bad'); };
@@ -358,7 +339,6 @@
                 <div><button class="btn sm" type="submit">Simpan koreksi</button></div></form></details>
           </div>
         </div>
-        <div class="card"><h3>Rekaman pelayanan (L10)</h3>${logTable(d.logs)}</div>
         ${d.layanan.length || d.keluhan.length ? `<div class="card"><h3>Tiket terkait</h3><ul>${d.layanan.map(x => `<li class="mono">${esc(x.no_layanan)} — ${esc(x.jenis)} · ${esc(x.status)}</li>`).join('')}${d.keluhan.map(x => `<li class="mono">${esc(x.no_tiket)} — Keluhan ${esc(x.kategori)} · ${esc(x.status)}</li>`).join('')}</ul></div>` : ''}`;
       $$('form[data-tahap]', m.body).forEach(f => f.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -443,12 +423,8 @@
       ${r.catatan_verifikasi ? `<p class="catatan"><b>Catatan verifikasi:</b> ${esc(r.catatan_verifikasi)}</p>` : ''}
       ${r.catatan_hasil ? `<p class="catatan"><b>Catatan hasil:</b> ${esc(r.catatan_hasil)}</p>` : ''}
 
-      <h2>E. Rekaman aktivitas pelayanan (L10)</h2>
-      <table><thead><tr><th style="width:5%">No</th><th style="width:19%">Waktu</th><th style="width:6%">L</th><th>Aktivitas</th><th style="width:24%">Dilakukan oleh</th></tr></thead><tbody>
-        ${d.logs.map((l, i) => `<tr><td>${i + 1}</td><td>${tgl(l.waktu)}</td><td>${esc(l.langkah_sop)}</td><td>${esc(l.aksi)}${l.detail ? '<br>' + esc(l.detail) : ''}</td><td>${esc(l.aktor)}<br>${esc(l.peran)}</td></tr>`).join('') || '<tr><td colspan="5">Belum ada rekaman.</td></tr>'}
-      </tbody></table>
 
-      ${d.layanan.length || d.keluhan.length ? `<h2>F. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
+      ${d.layanan.length || d.keluhan.length ? `<h2>E. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
         ${d.layanan.map(x => `<tr><td>${esc(x.no_layanan)}</td><td>${esc(x.jenis)}</td><td>${esc(x.status)}</td></tr>`).join('')}
         ${d.keluhan.map(x => `<tr><td>${esc(x.no_tiket)}</td><td>Keluhan: ${esc(x.kategori)}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : ''}
 

@@ -492,9 +492,7 @@
             ${r.status_jadwal === 'Terjadwal' ? `<div class="notice info" style="margin-top:14px"><b>Jadwal asesmen:</b> ${tgl(r.tanggal_asesmen, true)} ${esc(r.waktu_asesmen || '')}<br>TUK: ${esc(r.tuk)}${r.tuk_alamat ? ' — ' + esc(r.tuk_alamat) : ''}<br>Asesor: ${esc(r.asesor)}</div>` : ''}
           </div>
           <div class="card"><h3>Tahapan layanan (SOP)</h3>${timeline(r)}</div>
-        </div>
-        ${r.riwayat && r.riwayat.length ? `<div class="card"><h3>Rekaman pelayanan</h3><div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Langkah</th><th>Aktivitas</th></tr></thead><tbody>
-          ${r.riwayat.map(l => `<tr><td>${tgl(l.waktu)}</td><td>${esc(l.langkah_sop)}</td><td>${esc(l.aksi)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`);
+        </div>`);
     },
 
     plotting: async () => {

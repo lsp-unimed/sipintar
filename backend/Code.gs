@@ -427,7 +427,6 @@ const ADMIN = {
       const lay = rows_('Layanan');
       const sv = rows_('Survei');
       const avg = (k) => sv.length ? (sv.reduce((a, r) => a + Number(r[k] || 0), 0) / sv.length) : 0;
-      const logs = rows_('Log').slice(-20).reverse();
       return {
         total: p.length,
         menunggu_kelengkapan: c(r => (r.status_kelengkapan || 'Menunggu Pemeriksaan') !== 'Lengkap' && r.status_verifikasi !== 'Tidak Memenuhi Syarat'),
@@ -442,8 +441,7 @@ const ADMIN = {
         keluhan_terbuka: kel.filter(r => r.status !== 'Selesai' && r.status !== 'Ditolak').length,
         layanan_terbuka: lay.filter(r => r.status !== 'Selesai' && r.status !== 'Ditolak').length,
         survei_n: sv.length,
-        survei_rata: Math.round(avg('skor_keseluruhan') * 100) / 100,
-        logs: logs
+        survei_rata: Math.round(avg('skor_keseluruhan') * 100) / 100
       };
     }
   },
@@ -459,10 +457,9 @@ const ADMIN = {
     fn: (d) => {
       const r = rows_('Pendaftaran').find(x => x.no_reg === d.no_reg);
       if (!r) throw new Error('Data tidak ditemukan.');
-      const logs = riwayat_(r);
       const lay = rows_('Layanan').filter(l => l.no_reg === d.no_reg).map(strip_);
       const kel = rows_('Keluhan').filter(l => l.no_reg === d.no_reg).map(strip_);
-      return { data: strip_(r), logs: logs, layanan: lay, keluhan: kel };
+      return { data: strip_(r), layanan: lay, keluhan: kel }; // rekaman (Log) tidak ditampilkan; lihat langsung di spreadsheet
     }
   },
 
@@ -1368,7 +1365,6 @@ function publicView_(r) {
   const mapA = index_(rows_('Asesor'), 'id_asesor');
   const mapJ = index_(rows_('Jadwal'), 'id_jadwal');
   const j = mapJ[r.id_jadwal] || {};
-  const logs = riwayat_(r).map(l => ({ waktu: l.waktu, langkah_sop: l.langkah_sop, aksi: l.aksi }));
   return {
     no_reg: r.no_reg, nama: r.nama, nik: String(r.nik).slice(0, 4) + '********' + String(r.nik).slice(-4),
     email: r.email, waktu_daftar: r.waktu_daftar,
@@ -1386,8 +1382,7 @@ function publicView_(r) {
     tanggal_asesmen: r.tanggal_asesmen, waktu_asesmen: r.waktu_asesmen,
     status_asesmen: r.status_asesmen,
     rekomendasi: r.rekomendasi, tgl_hasil: r.tgl_hasil, link_surat_hasil: r.link_surat_hasil, catatan_hasil: r.catatan_hasil,
-    status_sertifikat: r.status_sertifikat, no_sertifikat: r.no_sertifikat, tgl_serah: r.tgl_serah,
-    riwayat: logs
+    status_sertifikat: r.status_sertifikat, no_sertifikat: r.no_sertifikat, tgl_serah: r.tgl_serah
   };
 }
 

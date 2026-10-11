@@ -436,3 +436,19 @@ td.mono { white-space: nowrap; }
 body.lihat-saja form[data-tahap], body.lihat-saja #bulk, body.lihat-saja #bKel, body.lihat-saja #bVer, body.lihat-saja #bPlot,
 body.lihat-saja #bAs, body.lihat-saja #bClr, body.lihat-saja #nsel, body.lihat-saja .ck, body.lihat-saja #ckAll,
 body.lihat-saja #fP, body.lihat-saja #fT, body.lihat-saja #fB { display: none !important; }
+
+/* Ringkasan: kepuasan + pintasan (pengganti panel aktivitas) */
+.ring-bawah { margin-top: 16px; align-items: stretch; }
+.card.puas { display: flex; justify-content: space-between; align-items: center; gap: 16px; text-decoration: none; color: inherit; border: 1px solid var(--line); }
+@media (hover: hover) { .card.puas:hover { border-color: var(--red); } }
+.card.puas .k { font-size: .86rem; color: var(--muted); }
+.card.puas .v { font-family: var(--display); font-size: 2.2rem; font-weight: 800; line-height: 1.1; margin: 4px 0; }
+.card.puas .v small { font-size: 1rem; color: var(--muted); font-weight: 600; }
+.card.puas .muted { font-size: .84rem; }
+.bintang { font-size: 1.5rem; letter-spacing: 2px; color: var(--line); white-space: nowrap; }
+.bintang .on { color: #f2b705; }
+.pintas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pintas a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--ink); font-weight: 600; font-size: .9rem; background: var(--white); }
+@media (hover: hover) { .pintas a:hover { border-color: var(--red); color: var(--red-ink); } }
+.pintas a svg { flex: none; width: 18px; height: 18px; color: var(--red); }
+@media (max-width: 600px) { .pintas { grid-template-columns: 1fr; } .bintang { font-size: 1.2rem; } .card.puas .v { font-size: 1.8rem; } }
