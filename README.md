@@ -22,7 +22,7 @@ Sistem ini mengadopsi alur layanan digital LSP UNS dan memetakannya ke **SOP Pel
 | 7 Penyampaian Hasil | Bagian Sertifikasi | Hasil Uji Kompetensi + surat hasil + **info hak banding & keluhan**, Banding Asesmen | Keputusan K/BK + link surat | Log L7 |
 | 8 Penyerahan Sertifikat | Bagian Administrasi | Tracer Sertifikat (Diajukan ke BNSP → Siap Diambil → Sudah Diserahkan) | No. sertifikat + nama penerima (tanda terima) | Log L8 |
 | 9 Penanganan Keluhan | Bagian Manajemen Mutu | Formulir keluhan + nomor tiket, Lacak Tiket | Tindak lanjut + tanggapan ke pelapor | Sheet `Keluhan`, log L9 |
-| 10 Pengendalian Rekaman | Sekretariat LSP | — | Rekaman tercatat otomatis (tidak ditampilkan di aplikasi agar ringan); **Cetak data peserta** | Sheet `Log` & `Akses` di spreadsheet |
+| 10 Pengendalian Rekaman | Sekretariat LSP | — | Rekaman tercatat otomatis; **Riwayat pelayanan per peserta** di detail peserta (dimuat saat diminta) dan **Cetak rekaman peserta** | Sheet `Log` & `Akses` di spreadsheet |
 
 Layanan tambahan yang mengikuti layanan digital LSP UNS: **Surveilans**, **Legalisir Sertifikat**, **Perpanjangan (RCC)**, dan **Survei Kepuasan** (menjawab tujuan SOP: meningkatkan kepuasan pemohon).
 
@@ -119,7 +119,7 @@ Peran **Ketua LSP** dan **Bidang Skema** hanya dapat melihat di SIPINTAR (Ketua 
 5. Keputusan K/BK dan surat hasil diinput (L7). Halaman **Hasil** asesi menampilkan info hak banding.
 6. Sertifikat ditandai *Siap Diambil*, lalu *Sudah Diserahkan* beserta nama penerima (L8).
 7. Simulasikan **keluhan**, lalu tindak lanjuti oleh Manajemen Mutu (L9) dan tunjukkan tanggapannya di **Lacak Tiket**.
-8. Tunjukkan sheet **Log** di spreadsheet (filter kolom `ref` = No. Reg) sebagai bukti mampu telusur, dan **Cetak data peserta** dari panel (L10).
+8. Buka detail satu peserta → **Tampilkan riwayat**, lalu **Cetak rekaman peserta** sebagai bukti mampu telusur (L10). Rekaman lengkap ada di sheet **Log**.
 
 ## 9. Pemeliharaan
 

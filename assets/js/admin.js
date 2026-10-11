@@ -306,10 +306,24 @@
   }
 
   async function detail(no, onChange) {
-    const m = modal('Peserta ' + no, loading(), { wide: true, headExtra: `<button class="btn sm ghost no-print" id="pr">${icon('print')} Cetak data peserta</button>`, onClose: () => changed && onChange && onChange() });
+    const m = modal('Peserta ' + no, loading(), { wide: true, headExtra: `<button class="btn sm ghost no-print" id="pr">${icon('print')} Cetak rekaman peserta</button>`, onClose: () => changed && onChange && onChange() });
     let changed = false;
     let current = null;
-    $('#pr', m.el).onclick = () => { if (current) cetakRekaman(current); else toast('Data belum selesai dimuat.', 'bad'); };
+    $('#pr', m.el).onclick = async () => {
+      if (!current) return toast('Data belum selesai dimuat.', 'bad');
+      const w = window.open('', '_blank'); // dibuka segera agar tidak diblokir pop-up
+      try { if (!current.logs) current.logs = await api('riwayatPeserta', { no_reg: no }); } catch (e) { current.logs = null; toast(e.message, 'bad'); }
+      cetakRekaman(current, w);
+    };
+    // Riwayat pelayanan peserta: diambil hanya saat diminta (server mencari baris peserta ini saja).
+    m.el.addEventListener('click', async (e) => {
+      if (!e.target.closest('#rwBtn')) return;
+      const b = $('#rwBtn', m.el), isi = $('#rwIsi', m.el);
+      b.disabled = true; isi.innerHTML = loading();
+      try { current.logs = await api('riwayatPeserta', { no_reg: no }); isi.innerHTML = tabelRiwayat(current.logs); b.textContent = 'Muat ulang'; }
+      catch (err) { isi.innerHTML = `<div class="notice bad">${esc(err.message)}</div>`; }
+      b.disabled = false;
+    });
     const load = async () => {
       const d = await api('detailPendaftar', { no_reg: no });
       current = d;
@@ -339,6 +353,7 @@
                 <div><button class="btn sm" type="submit">Simpan koreksi</button></div></form></details>
           </div>
         </div>
+        <div class="card" id="rwCard"><div class="card-head"><h3>Riwayat pelayanan peserta (L10)</h3><button class="btn sm ghost no-print" type="button" id="rwBtn">Tampilkan riwayat</button></div><div id="rwIsi"><p class="muted" style="margin:0">Riwayat dimuat saat diperlukan agar detail peserta tetap cepat dibuka.</p></div></div>
         ${d.layanan.length || d.keluhan.length ? `<div class="card"><h3>Tiket terkait</h3><ul>${d.layanan.map(x => `<li class="mono">${esc(x.no_layanan)} — ${esc(x.jenis)} · ${esc(x.status)}</li>`).join('')}${d.keluhan.map(x => `<li class="mono">${esc(x.no_tiket)} — Keluhan ${esc(x.kategori)} · ${esc(x.status)}</li>`).join('')}</ul></div>` : ''}`;
       $$('form[data-tahap]', m.body).forEach(f => f.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -352,7 +367,13 @@
   }
 
   /* ---------------- Cetak rekaman pelayanan (dokumen A4 rapi) ---------------- */
-  function cetakRekaman(d) {
+  function tabelRiwayat(rows) {
+    return `<div class="table-wrap"><table><thead><tr><th>Waktu</th><th>L</th><th>Aktivitas</th><th>Petugas</th></tr></thead><tbody>
+      ${rows.map(l => `<tr><td data-label="Waktu" style="white-space:nowrap">${tgl(l.waktu)}</td><td data-label="Langkah"><span class="badge info">${esc(l.langkah_sop)}</span></td><td data-label="Aktivitas">${esc(l.aksi)}${l.detail ? '<br><small class="muted">' + esc(l.detail) + '</small>' : ''}</td><td data-label="Petugas">${esc(l.aktor)}<br><small class="muted">${esc(l.peran)}</small></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Belum ada riwayat.</td></tr>'}
+    </tbody></table></div>`;
+  }
+
+  function cetakRekaman(d, wSiap) {
     const r = d.data;
     const T = tahapPeserta(r);
     const logo = new URL(CFG.LOGO_FULL || 'assets/img/logo-lsp.png', location.href).href;
@@ -424,7 +445,11 @@
       ${r.catatan_hasil ? `<p class="catatan"><b>Catatan hasil:</b> ${esc(r.catatan_hasil)}</p>` : ''}
 
 
-      ${d.layanan.length || d.keluhan.length ? `<h2>E. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
+      ${d.logs ? `<h2>E. Riwayat pelayanan (L10)</h2>
+      <table><thead><tr><th style="width:5%">No</th><th style="width:19%">Waktu</th><th style="width:6%">L</th><th>Aktivitas</th><th style="width:24%">Dilakukan oleh</th></tr></thead><tbody>
+        ${d.logs.map((l, i) => `<tr><td>${i + 1}</td><td>${tgl(l.waktu)}</td><td>${esc(l.langkah_sop)}</td><td>${esc(l.aksi)}${l.detail ? '<br>' + esc(l.detail) : ''}</td><td>${esc(l.aktor)}<br>${esc(l.peran)}</td></tr>`).join('') || '<tr><td colspan="5">Belum ada riwayat.</td></tr>'}
+      </tbody></table>` : ''}
+      ${d.layanan.length || d.keluhan.length ? `<h2>${d.logs ? 'F' : 'E'}. Tiket terkait</h2><table><thead><tr><th style="width:22%">No. tiket</th><th>Jenis</th><th style="width:18%">Status</th></tr></thead><tbody>
         ${d.layanan.map(x => `<tr><td>${esc(x.no_layanan)}</td><td>${esc(x.jenis)}</td><td>${esc(x.status)}</td></tr>`).join('')}
         ${d.keluhan.map(x => `<tr><td>${esc(x.no_tiket)}</td><td>Keluhan: ${esc(x.kategori)}</td><td>${esc(x.status)}</td></tr>`).join('')}</tbody></table>` : ''}
 
@@ -433,7 +458,7 @@
         <div>Medan, ${esc(tgl(sekarang.toISOString().slice(0, 10)))}<br>Mengetahui,<br>Sekretariat LSP<div class="garis">Nama dan tanda tangan</div></div>
       </div>
     </div></td></tr></tbody></table><script>window.onload = function () { setTimeout(function () { window.print(); }, 300); };<\/script></body></html>`;
-    const w = window.open('', '_blank');
+    const w = wSiap || window.open('', '_blank');
     if (!w) { toast('Izinkan pop-up untuk mencetak rekaman.', 'bad'); return; }
     w.document.write(html);
     w.document.close();

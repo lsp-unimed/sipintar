@@ -221,6 +221,7 @@
 
   const ADMIN = {
     me: (d, u) => u,
+    riwayatPeserta: (d) => db.Log.filter(l => l.ref === d.no_reg),
     awal: (d, u) => Object.assign({ me: u, ref: ADMIN.refData() }, d && d.ringkasan ? { summary: ADMIN.summary() } : {}),
     logout: () => true,
     summary: () => {

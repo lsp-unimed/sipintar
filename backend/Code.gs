@@ -453,6 +453,15 @@ const ADMIN = {
   listPendaftar: { fn: () => rows_('Pendaftaran').map(strip_).reverse() },
 
   /** Detail satu peserta beserta rekaman pelayanannya (langkah 10). */
+  /** Riwayat pelayanan satu peserta (L10), dimuat saat diminta dari detail peserta. */
+  riwayatPeserta: {
+    fn: (d) => {
+      const r = rows_('Pendaftaran').find(x => x.no_reg === String(d.no_reg || ''));
+      if (!r) throw new Error('Data tidak ditemukan.');
+      return riwayat_(r).map(l => ({ waktu: l.waktu, aktor: l.aktor, peran: l.peran, langkah_sop: l.langkah_sop, aksi: l.aksi, detail: l.detail }));
+    }
+  },
+
   detailPendaftar: {
     fn: (d) => {
       const r = rows_('Pendaftaran').find(x => x.no_reg === d.no_reg);
@@ -942,8 +951,29 @@ function pasangArsipOtomatis() {
 }
 
 /** Riwayat pelayanan satu peserta; bila riwayat awal sudah diarsipkan, dilengkapi dari file arsip. */
+/** Baris Log milik satu peserta saja: dicari dengan TextFinder di kolom ref, lalu dibaca satu blok
+ *  (tidak membaca seluruh sheet Log). Cadangan: baca semua bila TextFinder tidak tersedia. */
+function logPeserta_(noReg) {
+  const s = sh_('Log');
+  try {
+    const last = s.getLastRow();
+    if (last < 2) return [];
+    const head = s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].map(String);
+    const col = head.indexOf('ref') + 1;
+    const sel = s.getRange(2, col, last - 1, 1).createTextFinder(String(noReg)).matchEntireCell(true).findAll();
+    if (!sel.length) return [];
+    const baris = sel.map(c => c.getRow()), a = Math.min.apply(null, baris), b = Math.max.apply(null, baris);
+    const v = s.getRange(a, 1, b - a + 1, head.length).getValues();
+    const out = [];
+    v.forEach(x => { const o = {}; head.forEach((h, j) => o[h] = val_(x[j])); if (o.ref === noReg) out.push(o); });
+    return out;
+  } catch (e) {
+    return rows_('Log').filter(l => l.ref === noReg);
+  }
+}
+
 function riwayat_(r) {
-  let logs = rows_('Log').filter(l => l.ref === r.no_reg);
+  let logs = logPeserta_(r.no_reg);
   if (!logs.some(l => /Permohonan sertifikasi diterima/.test(l.aksi))) {
     const t0 = Number(String(r.waktu_daftar).slice(0, 4)) || new Date().getFullYear();
     const lama = [];
