@@ -464,3 +464,10 @@ body.lihat-saja #fP, body.lihat-saja #fT, body.lihat-saja #fB { display: none !i
   .tabs button.on { background: var(--red); border-color: var(--red); color: #fff; }
   .tabs button.on .n { background: rgba(255, 255, 255, .25); color: #fff; }
 }
+/* Aksi massal di HP: 3 baris rapi (Kelengkapan|Verifikasi, Jadwal|Asesmen, jumlah dipilih|Batal pilih) */
+@media (max-width: 640px) {
+  #bulk { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
+  #bulk .btn { width: 100%; justify-content: center; margin: 0; }
+  #bKel { order: 1; } #bVer { order: 2; } #bPlot { order: 3; } #bAs { order: 4; }
+  #nsel { order: 5; padding-left: 4px; } #bClr { order: 6; }
+}
