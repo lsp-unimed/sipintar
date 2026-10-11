@@ -156,7 +156,7 @@
         selesai: ['Selesai', r => r.status_sertifikat === 'Sudah Diserahkan' || r.rekomendasi === 'Belum Kompeten' || r.status_verifikasi === 'Tidak Memenuhi Syarat']
       };
       let tab = TABS[args[0]] ? args[0] : 'semua';
-      v.innerHTML = `<div class="tabs" id="tabs"></div><p class="muted" style="margin:-4px 0 10px;font-size:.85rem">Angka pada tab = jumlah peserta yang <b>menunggu tindakan</b> di tahap itu. Peserta yang sudah tuntas ada di tab Selesai; semua peserta ada di tab Semua.</p>
+      v.innerHTML = `<div class="tabs" id="tabs"></div><p class="muted tab-ket" style="margin:-4px 0 10px;font-size:.85rem">Angka pada tab = jumlah peserta yang <b>menunggu tindakan</b> di tahap itu. Peserta yang sudah tuntas ada di tab Selesai; semua peserta ada di tab Semua.</p>
         <div class="toolbar"><input id="q" placeholder="Cari nama, No. Reg, NIK, email…"><select id="fj"><option value="">Semua jadwal</option>${REF.Jadwal.map(j => `<option value="${esc(j.id_jadwal)}">${esc(jadwalLabel(j.id_jadwal))}</option>`).join('')}</select>
         <button class="btn sm ghost" id="exp">${icon('download')} CSV</button></div>
         <div class="toolbar" id="bulk" hidden><b id="nsel"></b><button class="btn sm" id="bKel">Kelengkapan…</button><button class="btn sm" id="bVer">Verifikasi…</button><button class="btn sm" id="bPlot">Tetapkan jadwal…</button><button class="btn sm" id="bAs">Status asesmen…</button><button class="btn sm ghost" id="bClr">Batal pilih</button></div>
@@ -166,6 +166,7 @@
       const draw = () => {
         const q = $('#q').value.toLowerCase().trim(), fj = $('#fj').value;
         $('#tabs').innerHTML = Object.keys(TABS).map(k => `<button data-t="${k}" class="${k === tab ? 'on' : ''}">${esc(TABS[k][0])}<span class="n">${all.filter(TABS[k][1]).length}</span></button>`).join('');
+        { const tb = $('#tabs'), on = tb.querySelector('.on'); if (on && tb.scrollWidth > tb.clientWidth) tb.scrollLeft = on.offsetLeft - (tb.clientWidth - on.offsetWidth) / 2; } // HP: tab aktif ke tengah
         rows = all.filter(TABS[tab][1]).filter(r => (!fj || r.id_jadwal === fj) && (!q || [r.nama, r.no_reg, r.nik, r.email, r.nim].join(' ').toLowerCase().indexOf(q) >= 0));
         $('#tb').innerHTML = rows.length ? rows.map(r => `<tr class="clickable" data-no="${esc(r.no_reg)}">
           <td onclick="event.stopPropagation()"><input type="checkbox" class="ck" value="${esc(r.no_reg)}" ${sel.has(r.no_reg) ? 'checked' : ''}></td>
