@@ -379,20 +379,13 @@ const PUBLIC = {
   /** Login admin. */
   login: (d) => {
     const u = String(d.username || '').trim().toLowerCase();
-    const cache = CacheService.getScriptCache();
-    const failKey = 'fail_' + u;
-    // seluruh proses di dalam kunci agar penghitung gagal tidak bisa diakali dengan permintaan paralel
     const hasil = withLock_(() => {
-      const fails = Number(cache.get(failKey) || 0);
-      if (fails >= 5) throw new Error('Terlalu banyak percobaan gagal. Coba lagi 10 menit lagi.');
       const user = rows_('Pengguna').find(r => String(r.username).toLowerCase() === u);
       // hash tetap dihitung walau username tidak ada, agar waktu respons tidak membocorkan username
       const cocok = hash_(d.password || '', user ? user.salt : 'sipintar-dummy-salt') === (user ? user.password_hash : 'x');
       if (!user || !cocok || String(user.aktif).toUpperCase() === 'TIDAK') {
-        cache.put(failKey, String(fails + 1), 600);
         throw new Error('Username atau password salah.');
       }
-      cache.remove(failKey);
       const token = Utilities.getUuid() + Utilities.getUuid().replace(/-/g, '');
       const ingat = d.ingat === true || d.ingat === 'on' || d.ingat === 'YA';
       const sess = { username: user.username, nama: user.nama, peran: user.peran, t: Date.now(), ingat: ingat, sk: String(user.salt || '').slice(0, 12),

@@ -105,7 +105,7 @@ Peran **Ketua LSP** dan **Bidang Skema** hanya dapat melihat di SIPINTAR (Ketua 
 ## 7. Keamanan & kerahasiaan data
 
 - Peserta hanya bisa melihat datanya dengan **No. Registrasi + email**. Di sisi publik, NIK disamarkan dan nama di halaman plotting juga disamarkan.
-- Password admin disimpan sebagai hash SHA-256 bergaram. Login dikunci 10 menit setelah 5 kali gagal, dan sesi berlaku 6 jam.
+- Password admin disimpan sebagai hash SHA-256 bergaram. Sesi login berlaku 6 jam.
 - Berkas unggahan masuk ke folder Drive **`SIPINTAR_UPLOADS/<No.Reg>/`** dan **tidak dibagikan publik**. Agar admin lain bisa membuka tautan berkas dari panel, bagikan folder tersebut ke akun Google mereka.
 - Link **surat hasil** dan **dokumen mutu** harus diatur *siapa saja yang memiliki link* agar dapat dibuka peserta.
 - Batas unggahan per berkas 2 MB (PDF/JPG/PNG). Ubah `MAX_FILE_MB` di `Code.gs` dan `config.js` jika perlu.
