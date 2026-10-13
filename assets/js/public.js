@@ -224,7 +224,7 @@
     if (kl === 'Belum Lengkap') h += `<div class="notice" style="margin-top:10px"><b>Berkas belum lengkap:</b> ${esc(r.catatan_kelengkapan || '-')}</div>`;
     if (r.status_verifikasi === 'Perlu Perbaikan') h += `<div class="notice" style="margin-top:10px"><b>Perlu perbaikan:</b> ${esc(r.catatan_verifikasi || '-')}</div>`;
     if (r.status_verifikasi === 'Tidak Memenuhi Syarat') h += `<div class="notice bad" style="margin-top:10px"><b>Tidak memenuhi syarat.</b> ${esc(r.catatan_verifikasi || '')}</div>`;
-    if (kl === 'Lengkap' && r.status_verifikasi === 'Menunggu Verifikasi') h += `<div class="notice info" style="margin-top:10px"><b>Berkas lengkap — lakukan verifikasi langsung.</b> Bawa seluruh berkas asli (APL-01, surat keterangan aktif, print out KHS, KTP, dan bukti persyaratan). ${esc(info)}</div>`;
+    if (kl === 'Lengkap' && r.status_verifikasi === 'Menunggu Verifikasi') h += `<div class="notice info" style="margin-top:10px"><b>Berkas lengkap — lakukan verifikasi langsung.</b> Bawa seluruh berkas asli (APL-01, APL-02, surat keterangan aktif, print out KHS, KTP, dan bukti persyaratan). ${esc(info)}</div>`;
     if (ulang) h += `<form class="form" id="fUlang" style="margin-top:10px;padding:14px;border:1px dashed var(--line);border-radius:10px">
         <b>Unggah ulang berkas</b><small class="muted">Pilih hanya berkas yang perlu diganti. PDF/JPG/PNG, maks. ${CFG.MAX_FILE_MB || 2} MB.</small>
         ${Object.keys(lbl).map(k => `<label class="f">${lbl[k]}<input type="file" name="file_${k}" accept=".pdf,.jpg,.jpeg,.png"></label>`).join('')}

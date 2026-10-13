@@ -662,7 +662,7 @@ const TAHAP = {
     auto: () => ({ tgl_kelengkapan: now_() }),
     email: r => r.status_kelengkapan === 'Lengkap' ? {
       subjek: 'Berkas lengkap — jadwalkan verifikasi langsung',
-      isi: 'Berkas pendaftaran Anda telah diperiksa dan dinyatakan <b>LENGKAP</b>.<br>Langkah berikutnya: <b>verifikasi langsung</b>. Datang membawa seluruh <b>berkas asli</b> (surat keterangan aktif, print out KHS, KTP, APL-01, dan bukti persyaratan lainnya).<br>' +
+      isi: 'Berkas pendaftaran Anda telah diperiksa dan dinyatakan <b>LENGKAP</b>.<br>Langkah berikutnya: <b>verifikasi langsung</b>. Datang membawa seluruh <b>berkas asli</b> (surat keterangan aktif, print out KHS, KTP, APL-01, APL-02, dan bukti persyaratan lainnya).<br>' +
         esc_(settings_().info_verifikasi_langsung || 'Tempat dan waktu: Sekretariat LSP UNIMED pada jam layanan.')
     } : r.status_kelengkapan === 'Belum Lengkap' ? {
       subjek: 'Berkas belum lengkap',
