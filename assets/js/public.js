@@ -155,7 +155,7 @@
       <div class="notice" style="margin:0 0 10px;background:#fff"><b>Formulir FR.APL.01 dan FR.APL.02 berbeda untuk setiap skema.</b> Unduh formulir sesuai skema yang Anda pilih, <b>cetak dan isi dengan tulisan tangan</b> (tidak diketik), lalu pindai (scan) untuk diunggah. Ketentuan pengisian ada di menu Dokumen mutu. Formulir aslinya dibawa saat verifikasi langsung.<br>${contohApl(D, idSkema)}</div>
       <ol style="margin:0 0 10px;padding-left:20px">
         <li><b>FR.APL.01</b> Permohonan Sertifikasi <b>sesuai skema</b> — dicetak dan diisi tulisan tangan. ${apl01 ? 'Unduh template: ' + a(apl01, 'FR.APL.01') : 'Template per skema tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
-        <li><b>FR.APL.02</b> Asesmen Mandiri <b>sesuai skema</b> — dicetak dan diisi tulisan tangan. ${apl02 ? 'Unduh template: ' + a(apl02, 'FR.APL.02') : 'Template per skema tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
+        <li><b>FR.APL.02</b> Asesmen Mandiri <b>sesuai skema</b> — dicetak, isi <b>bagian identitas saja</b> dengan tulisan tangan. ${apl02 ? 'Unduh template: ' + a(apl02, 'FR.APL.02') : 'Template per skema tersedia di menu ' + a('#/dokumen' + (idSkema ? '/' + esc(idSkema) : ''), 'Dokumen mutu') + '.'}</li>
         <li>KTP dan pas foto berwarna terbaru.</li>
         <li>KHS / transkrip dengan nilai minimal B pada mata kuliah yang disyaratkan skema.</li>
         <li>Surat keterangan mahasiswa aktif dari Dekan, serta bukti magang/PKLI atau sertifikat pelatihan — gabungkan dalam satu PDF.</li>
@@ -360,7 +360,7 @@
     dokumen(D, args) {
       const pre = args[0] || '';
       const nmS = (id) => (D.skema.find(x => x.id_skema === id) || {}).nama_skema || id;
-      view.innerHTML = `<div class="notice" style="margin-bottom:14px"><b>FR.APL.01 dan FR.APL.02 berbeda untuk setiap skema</b> — pilih skema Anda di bawah. Formulir dicetak, diisi dengan tulisan tangan (tidak diketik), lalu dipindai untuk diunggah saat pendaftaran.<div style="margin:8px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff"><b>Penting:</b> pada FR.APL.01 dan FR.APL.02, <b>jangan ditandatangani dulu</b> dan <b>kolom tanggal jangan diisi dulu</b>. Biarkan kosong; keduanya diisi sesuai arahan petugas LSP.</div><span id="dkC"></span></div><div class="toolbar"><label class="f" style="flex:1 1 320px">Tampilkan formulir untuk skema
+      view.innerHTML = `<div class="notice" style="margin-bottom:14px"><b>FR.APL.01 dan FR.APL.02 berbeda untuk setiap skema</b> — pilih skema Anda di bawah. Formulir dicetak, diisi dengan tulisan tangan (tidak diketik), lalu dipindai untuk diunggah saat pendaftaran.<div style="margin:8px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff"><b>Penting:</b> pada FR.APL.01 dan FR.APL.02, <b>jangan ditandatangani dulu</b> dan <b>kolom tanggal jangan diisi dulu</b>. <b>FR.APL.02 cukup diisi bagian identitasnya saja</b>; pertanyaan asesmen mandiri dijawab setelah verifikasi langsung, sebelum asesmen dilaksanakan.</div><span id="dkC"></span></div><div class="toolbar"><label class="f" style="flex:1 1 320px">Tampilkan formulir untuk skema
         <select id="dkS"><option value="">— Dokumen umum (pilih skema) —</option>${D.skema.map(s => `<option value="${esc(s.id_skema)}" ${pre === s.id_skema ? 'selected' : ''}>${esc(s.nama_skema)}</option>`).join('')}</select></label></div><div id="dkL"></div>`;
       const draw = () => {
         const s = $('#dkS').value;
