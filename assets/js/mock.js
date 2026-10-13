@@ -149,7 +149,7 @@
       const dobel = db.Pendaftaran.find(r => r.id_jadwal === d.id_jadwal && r.nik === d.nik && r.status_verifikasi !== 'Tidak Memenuhi Syarat');
       if (dobel) fail('NIK ini sudah terdaftar pada jadwal yang sama (No. Registrasi ' + dobel.no_reg + ').');
       const f = d.files || {};
-      if (!f.file_apl01) fail('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
+      if (!f.file_apl01) fail('APL-01 yang telah diisi wajib diunggah.');
       if (!f.file_ktp) fail('Scan KTP wajib diunggah.');
       if (!f.file_foto) fail('Pas foto wajib diunggah.');
       const no = nextId('REG', 'LSPU-' + ym() + '-', 4);

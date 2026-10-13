@@ -187,7 +187,7 @@ const PUBLIC = {
     batas_('daftar_nik_' + String(d.nik).trim(), 6, 86400, 'Terlalu banyak percobaan pendaftaran dengan NIK ini hari ini. Hubungi Sekretariat LSP bila perlu bantuan.');
 
     const files = d.files || {};
-    if (!files.file_apl01) throw new Error('APL-01 yang telah diisi dan ditandatangani wajib diunggah.');
+    if (!files.file_apl01) throw new Error('APL-01 yang telah diisi wajib diunggah.');
     if (!files.file_ktp) throw new Error('Scan KTP wajib diunggah.');
     if (!files.file_foto) throw new Error('Pas foto wajib diunggah.');
     const nik = String(d.nik).trim();
@@ -662,7 +662,7 @@ const TAHAP = {
     auto: () => ({ tgl_kelengkapan: now_() }),
     email: r => r.status_kelengkapan === 'Lengkap' ? {
       subjek: 'Berkas lengkap — jadwalkan verifikasi langsung',
-      isi: 'Berkas pendaftaran Anda telah diperiksa dan dinyatakan <b>LENGKAP</b>.<br>Langkah berikutnya: <b>verifikasi langsung</b>. Datang membawa seluruh <b>berkas asli</b> (surat keterangan aktif, print out KHS, KTP, APL-01 bertanda tangan, dan bukti persyaratan lainnya).<br>' +
+      isi: 'Berkas pendaftaran Anda telah diperiksa dan dinyatakan <b>LENGKAP</b>.<br>Langkah berikutnya: <b>verifikasi langsung</b>. Datang membawa seluruh <b>berkas asli</b> (surat keterangan aktif, print out KHS, KTP, APL-01, dan bukti persyaratan lainnya).<br>' +
         esc_(settings_().info_verifikasi_langsung || 'Tempat dan waktu: Sekretariat LSP UNIMED pada jam layanan.')
     } : r.status_kelengkapan === 'Belum Lengkap' ? {
       subjek: 'Berkas belum lengkap',

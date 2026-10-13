@@ -12,7 +12,7 @@
   const nmAsesor = (id) => (REF.Asesor.find(s => s.id_asesor === id) || {}).nama_asesor || id || '-';
   const jadwalLabel = (id) => { const j = REF.Jadwal.find(x => x.id_jadwal === id); return j ? nmSkema(j.id_skema) + ' — ' + tgl(j.tanggal) : id || '-'; };
   const PJ = {}; SOP.langkah.forEach(l => PJ[l.no] = l.pj);
-  const BERKAS = [['file_apl01', 'FR.APL.01 bertanda tangan'], ['file_ktp', 'KTP'], ['file_foto', 'Pas foto'], ['file_ijazah', 'KHS / transkrip'], ['file_apl02', 'FR.APL.02'], ['file_pendukung', 'Surat aktif + bukti persyaratan']];
+  const BERKAS = [['file_apl01', 'FR.APL.01'], ['file_ktp', 'KTP'], ['file_foto', 'Pas foto'], ['file_ijazah', 'KHS / transkrip'], ['file_apl02', 'FR.APL.02'], ['file_pendukung', 'Surat aktif + bukti persyaratan']];
   const syaratSkema = (id) => String((REF.Skema.find(x => x.id_skema === id) || {}).persyaratan || '').split(/\n+/).map(x => x.trim()).filter(String);
   const kl = (r) => r.status_kelengkapan || 'Menunggu Pemeriksaan';
   /** formData + daftar centang (data-list) + verifikasi_langsung YA/TIDAK */
